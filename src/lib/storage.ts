@@ -118,6 +118,112 @@ export function saveLocalMatches(matches: MatchRecord[]): void {
   }
 }
 
+// Recalculate stats entirely from match history
+export function recalculateAllStats(matches: MatchRecord[], players: Player[]): Record<string, PlayerStats> {
+  const newStats: Record<string, PlayerStats> = {};
+
+  players.forEach((p) => {
+    newStats[p.id] = createEmptyStats(p.id);
+  });
+
+  matches.forEach((match) => {
+    match.players.forEach((player) => {
+      if (!newStats[player.id]) {
+        newStats[player.id] = createEmptyStats(player.id);
+      }
+      const ps = newStats[player.id];
+      ps.totalGames += 1;
+      if (match.winnerId === player.id) {
+        ps.totalWins += 1;
+      }
+
+      const playerMatchStats = match.summary?.finalStats?.[player.id];
+
+      if (match.mode === '301' || match.mode === '501' || match.mode === '701') {
+        ps.x01Games += 1;
+        if (match.winnerId === player.id) ps.x01Wins += 1;
+        if (playerMatchStats) {
+          ps.x01TotalDarts += playerMatchStats.dartsThrown || 0;
+          ps.x01TotalScore += playerMatchStats.totalScoreScored || 0;
+          const avg = playerMatchStats.average3Darts || 0;
+          if (avg > ps.x01BestAverage) ps.x01BestAverage = avg;
+          ps.x01Count180 += playerMatchStats.count180 || 0;
+          ps.x01Count140Plus += playerMatchStats.count140Plus || 0;
+          ps.x01Count100Plus += playerMatchStats.count100Plus || 0;
+          if ((playerMatchStats.highestCheckout || 0) > ps.x01HighestCheckout) {
+            ps.x01HighestCheckout = playerMatchStats.highestCheckout;
+          }
+        }
+      } else if (match.mode === 'cricket') {
+        ps.cricketGames += 1;
+        if (match.winnerId === player.id) ps.cricketWins += 1;
+        if (playerMatchStats) {
+          ps.cricketTotalMarks += playerMatchStats.totalMarks || 0;
+          ps.cricketTotalRounds += playerMatchStats.roundsPlayed || 1;
+          const mpr = playerMatchStats.mpr || 0;
+          if (mpr > ps.cricketBestMPR) ps.cricketBestMPR = mpr;
+        }
+      } else if (match.mode === 'king') {
+        ps.kingGames += 1;
+        if (match.winnerId === player.id) ps.kingWins += 1;
+        if (playerMatchStats) {
+          ps.kingTotalEliminations += playerMatchStats.kills || 0;
+        }
+      }
+    });
+  });
+
+  return newStats;
+}
+
+// Delete a specific match and recalculate stats
+export async function deleteMatchRecord(matchId: string): Promise<Record<string, PlayerStats>> {
+  const matches = loadLocalMatches().filter((m) => m.id !== matchId);
+  saveLocalMatches(matches);
+
+  const players = loadLocalPlayers();
+  const updatedStats = recalculateAllStats(matches, players);
+  saveLocalStats(updatedStats);
+
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      await supabase.from('matches').delete().eq('id', matchId);
+      for (const p of players) {
+        const s = updatedStats[p.id];
+        if (s) {
+          await supabase.from('player_stats').upsert({
+            player_id: p.id,
+            total_games: s.totalGames,
+            total_wins: s.totalWins,
+            x01_games: s.x01Games,
+            x01_wins: s.x01Wins,
+            x01_total_darts: s.x01TotalDarts,
+            x01_total_score: s.x01TotalScore,
+            x01_best_average: s.x01BestAverage,
+            x01_count_180: s.x01Count180,
+            x01_count_140_plus: s.x01Count140Plus,
+            x01_count_100_plus: s.x01Count100Plus,
+            x01_highest_checkout: s.x01HighestCheckout,
+            cricket_games: s.cricketGames,
+            cricket_wins: s.cricketWins,
+            cricket_total_marks: s.cricketTotalMarks,
+            cricket_total_rounds: s.cricketTotalRounds,
+            cricket_best_mpr: s.cricketBestMPR,
+            king_games: s.kingGames,
+            king_wins: s.kingWins,
+            king_total_eliminations: s.kingTotalEliminations
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to delete match on Supabase:', err);
+    }
+  }
+
+  return updatedStats;
+}
+
 // Sync with Supabase (Offline-first)
 export async function syncPlayersFromRemote(): Promise<Player[]> {
   const supabase = getSupabaseClient();
@@ -135,7 +241,6 @@ export async function syncPlayersFromRemote(): Promise<Player[]> {
       saveLocalPlayers(data as Player[]);
       return data as Player[];
     } else {
-      // Push local players to remote
       const local = loadLocalPlayers();
       await supabase.from('players').upsert(local);
       return local;
@@ -160,7 +265,6 @@ export async function savePlayer(player: Player): Promise<Player> {
 
   saveLocalPlayers(updated);
 
-  // Sync to remote if connected
   const supabase = getSupabaseClient();
   if (supabase) {
     try {
@@ -193,11 +297,9 @@ export async function deletePlayer(playerId: string): Promise<void> {
 }
 
 export async function recordMatchResult(match: MatchRecord): Promise<Record<string, PlayerStats>> {
-  // 1. Save match locally
   const matches = [match, ...loadLocalMatches()];
   saveLocalMatches(matches);
 
-  // 2. Update stats for each player
   const statsMap = loadLocalStats();
 
   match.players.forEach((player) => {
@@ -247,7 +349,6 @@ export async function recordMatchResult(match: MatchRecord): Promise<Record<stri
 
   saveLocalStats(statsMap);
 
-  // 3. Sync to Supabase if connected
   const supabase = getSupabaseClient();
   if (supabase) {
     try {

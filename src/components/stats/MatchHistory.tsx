@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import { History, Trophy, Calendar, Clock, Target, Trash2 } from 'lucide-react';
 import type { MatchRecord } from '../../types/game';
-import { loadLocalMatches, saveLocalMatches } from '../../lib/storage';
+import { loadLocalMatches, saveLocalMatches, deleteMatchRecord } from '../../lib/storage';
+import { usePlayers } from '../../context/PlayerContext';
 
 export const MatchHistory: React.FC = () => {
   const [matches, setMatches] = useState<MatchRecord[]>(() => loadLocalMatches());
+  const { updateStatsState } = usePlayers();
 
   const handleClearHistory = () => {
     if (window.confirm('Voulez-vous vraiment effacer tout l\'historique des parties ?')) {
       saveLocalMatches([]);
       setMatches([]);
+    }
+  };
+
+  const handleDeleteSingleMatch = async (matchId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Supprimer cette partie de l\'historique et recalculer les statistiques ?')) {
+      const updatedStats = await deleteMatchRecord(matchId);
+      setMatches(loadLocalMatches());
+      updateStatsState(updatedStats);
     }
   };
 
@@ -34,7 +45,7 @@ export const MatchHistory: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 pb-20">
+    <div className="max-w-4xl mx-auto space-y-3 pb-20 animate-fadeIn">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -46,7 +57,7 @@ export const MatchHistory: React.FC = () => {
             </span>
           </h2>
           <p className="text-xs text-slate-400">
-            Détail des manches et résultats enregistrés.
+            Détail des manches enregistrées et suppression unitaire si besoin.
           </p>
         </div>
 
@@ -54,7 +65,7 @@ export const MatchHistory: React.FC = () => {
           <button
             onClick={handleClearHistory}
             className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors border border-slate-800"
-            title="Vider l'historique"
+            title="Tout vider"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -63,52 +74,62 @@ export const MatchHistory: React.FC = () => {
 
       {/* Matches List */}
       {matches.length === 0 ? (
-        <div className="glass-panel rounded-3xl p-10 text-center space-y-2 border border-slate-800">
-          <Target className="w-10 h-10 text-slate-600 mx-auto" />
-          <h3 className="text-base font-bold text-slate-300">Aucune partie enregistrée</h3>
+        <div className="glass-panel rounded-3xl p-8 text-center space-y-2 border border-slate-800">
+          <Target className="w-8 h-8 text-slate-600 mx-auto" />
+          <h3 className="text-sm font-bold text-slate-300">Aucune partie enregistrée</h3>
           <p className="text-xs text-slate-500">
             Les parties terminées s'afficheront automatiquement ici avec leurs statistiques.
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {matches.map((match) => {
             const winner = match.players.find((p) => p.id === match.winnerId);
 
             return (
               <div
                 key={match.id}
-                className="p-4 rounded-2xl glass-panel border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+                className="p-3.5 rounded-2xl glass-panel border border-slate-800 hover:border-slate-700 transition-all space-y-2 relative group"
               >
-                {/* Header: Mode & Winner */}
+                {/* Header: Mode, Date, Duration & Single Delete */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 font-black text-xs border border-emerald-500/30 uppercase tracking-wider">
+                    <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-black text-[11px] border border-emerald-500/30 uppercase tracking-wider">
                       {match.mode}
                     </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
                       {formatDate(match.date)}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1 text-xs text-slate-400">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>{formatDuration(match.durationSeconds || 0)}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                      <Clock className="w-3 h-3" />
+                      <span>{formatDuration(match.durationSeconds || 0)}</span>
+                    </div>
+
+                    <button
+                      onClick={(e) => handleDeleteSingleMatch(match.id, e)}
+                      className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                      title="Supprimer cette partie"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
                 {/* Match Summary */}
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center space-x-2">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center text-lg shadow-sm">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center text-base shadow-sm">
                       {winner?.avatar || '🏆'}
                     </div>
                     <div>
-                      <div className="text-xs text-amber-400 font-semibold flex items-center gap-1">
-                        <Trophy className="w-3.5 h-3.5" /> Vainqueur
+                      <div className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                        <Trophy className="w-3 h-3" /> Vainqueur
                       </div>
-                      <div className="text-sm font-black text-white">{winner?.name || 'Inconnu'}</div>
+                      <div className="text-xs font-black text-white">{winner?.name || 'Inconnu'}</div>
                     </div>
                   </div>
 

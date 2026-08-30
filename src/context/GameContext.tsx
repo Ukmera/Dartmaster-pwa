@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import type {
   GameMode,
@@ -25,6 +25,27 @@ import {
 } from '../utils/dartCalculations';
 import { announceTurnScore } from '../utils/voiceCaller';
 import { recordMatchResult } from '../lib/storage';
+
+const ACTIVE_SESSION_KEY = 'dartmaster_active_game_session';
+
+interface SavedGameSession {
+  mode: GameMode;
+  status: GameStatus;
+  x01Config: X01Config;
+  cricketConfig: CricketConfig;
+  kingConfig: KingConfig;
+  selectedPlayerIds: string[];
+  currentPlayerIndex: number;
+  currentDarts: DartThrow[];
+  roundIndex: number;
+  currentLeg: number;
+  x01States: Record<string, X01PlayerState>;
+  cricketStates: Record<string, CricketPlayerState>;
+  kingStates: Record<string, KingPlayerState>;
+  winnerId: string | null;
+  podiumWinners: { playerId: string; rank: number }[];
+  matchStartTime: number;
+}
 
 interface GameStateSnapshot {
   mode: GameMode;
@@ -63,6 +84,12 @@ interface GameContextType {
   winnerId: string | null;
   podiumWinners: { playerId: string; rank: number }[];
   canUndo: boolean;
+
+  // Active Session Resume
+  hasSavedSession: boolean;
+  savedSessionSummary: { mode: string; leg: number; playerCount: number; playerNames: string[] } | null;
+  resumeSavedSession: () => void;
+  discardSavedSession: () => void;
 
   // Pending Cricket Choice
   pendingCricketChoice: PendingCricketChoice | null;
@@ -139,12 +166,114 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const historyStack = useRef<GameStateSnapshot[]>([]);
   const matchStartTime = useRef<number>(Date.now());
 
-  // CRITICAL FIX: Active players MUST follow selectedPlayerIds exact order!
+  // Active players follows selectedPlayerIds exact order
   const activePlayers = useMemo(() => {
     return selectedPlayerIds
       .map((id) => players.find((p) => p.id === id))
       .filter((p): p is Player => !!p);
   }, [selectedPlayerIds, players]);
+
+  // Saved Session Detector
+  const [savedSessionData, setSavedSessionData] = useState<SavedGameSession | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(ACTIVE_SESSION_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const hasSavedSession = !!savedSessionData && status === 'setup';
+
+  const savedSessionSummary = useMemo(() => {
+    if (!savedSessionData) return null;
+    const names = savedSessionData.selectedPlayerIds
+      .map((id) => players.find((p) => p.id === id)?.name || 'Joueur')
+      .filter(Boolean);
+    return {
+      mode: savedSessionData.mode.toUpperCase(),
+      leg: savedSessionData.currentLeg || 1,
+      playerCount: savedSessionData.selectedPlayerIds.length,
+      playerNames: names
+    };
+  }, [savedSessionData, players]);
+
+  // Auto-persist active session on state change
+  useEffect(() => {
+    if (status === 'in_progress') {
+      const session: SavedGameSession = {
+        mode,
+        status,
+        x01Config,
+        cricketConfig,
+        kingConfig,
+        selectedPlayerIds,
+        currentPlayerIndex,
+        currentDarts,
+        roundIndex,
+        currentLeg,
+        x01States,
+        cricketStates,
+        kingStates,
+        winnerId,
+        podiumWinners,
+        matchStartTime: matchStartTime.current
+      };
+      try {
+        localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(session));
+        setSavedSessionData(session);
+      } catch (e) {
+        console.error('Failed to auto-save game session:', e);
+      }
+    } else if (status === 'finished' || status === 'setup') {
+      if (status === 'finished') {
+        localStorage.removeItem(ACTIVE_SESSION_KEY);
+        setSavedSessionData(null);
+      }
+    }
+  }, [
+    status,
+    mode,
+    x01Config,
+    cricketConfig,
+    kingConfig,
+    selectedPlayerIds,
+    currentPlayerIndex,
+    currentDarts,
+    roundIndex,
+    currentLeg,
+    x01States,
+    cricketStates,
+    kingStates,
+    winnerId,
+    podiumWinners
+  ]);
+
+  const resumeSavedSession = () => {
+    if (!savedSessionData) return;
+    setMode(savedSessionData.mode);
+    setX01Config(savedSessionData.x01Config);
+    setCricketConfig(savedSessionData.cricketConfig);
+    setKingConfig(savedSessionData.kingConfig);
+    setSelectedPlayerIds(savedSessionData.selectedPlayerIds);
+    setCurrentPlayerIndex(savedSessionData.currentPlayerIndex);
+    setCurrentDarts(savedSessionData.currentDarts);
+    setRoundIndex(savedSessionData.roundIndex);
+    setCurrentLeg(savedSessionData.currentLeg);
+    setX01States(savedSessionData.x01States);
+    setCricketStates(savedSessionData.cricketStates);
+    setKingStates(savedSessionData.kingStates);
+    setWinnerId(savedSessionData.winnerId);
+    setPodiumWinners(savedSessionData.podiumWinners || []);
+    matchStartTime.current = savedSessionData.matchStartTime || Date.now();
+    setStatus('in_progress');
+  };
+
+  const discardSavedSession = () => {
+    localStorage.removeItem(ACTIVE_SESSION_KEY);
+    setSavedSessionData(null);
+  };
 
   const saveSnapshot = useCallback(() => {
     historyStack.current.push({
@@ -175,17 +304,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     podiumWinners
   ]);
 
+  // Start New Game with Equitable Turn Rotation (Round-Robin & Duo alternate)
   const startNewGame = useCallback(() => {
     if (selectedPlayerIds.length === 0) return;
 
     let orderedIds = [...selectedPlayerIds];
 
-    if (randomizeOrder && orderedIds.length > 1) {
-      // Shuffle order
-      orderedIds = [...orderedIds].sort(() => Math.random() - 0.5);
+    if (orderedIds.length === 2) {
+      // Duo Mode: Perfect alternation A -> B, B -> A
+      orderedIds = [orderedIds[1], orderedIds[0]];
       setSelectedPlayerIds(orderedIds);
-    } else if (!randomizeOrder && orderedIds.length > 1) {
-      // Rotate order
+    } else if (orderedIds.length > 2) {
+      // Multi Mode (>2): Circular Round-Robin [J1, J2, J3] -> [J2, J3, J1]
       const [first, ...rest] = orderedIds;
       orderedIds = [...rest, first];
       setSelectedPlayerIds(orderedIds);
@@ -263,9 +393,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setStatus('in_progress');
-  }, [selectedPlayerIds, players, randomizeOrder, setSelectedPlayerIds, mode]);
+  }, [selectedPlayerIds, players, setSelectedPlayerIds, mode]);
 
   const quitGame = () => {
+    localStorage.removeItem(ACTIVE_SESSION_KEY);
+    setSavedSessionData(null);
     setStatus('setup');
     setWinnerId(null);
     setPodiumWinners([]);
@@ -280,6 +412,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setWinnerId(winId);
       setStatus('finished');
       sound.playVictory();
+      localStorage.removeItem(ACTIVE_SESSION_KEY);
+      setSavedSessionData(null);
 
       confetti({
         particleCount: 130,
@@ -1132,6 +1266,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         winnerId,
         podiumWinners,
         canUndo: historyStack.current.length > 0,
+        hasSavedSession,
+        savedSessionSummary,
+        resumeSavedSession,
+        discardSavedSession,
         pendingCricketChoice,
         resolveCricketChoice,
         recordDirectCricketMark,

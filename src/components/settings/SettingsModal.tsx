@@ -1,24 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, Mic, Smartphone, Database, Check, Sparkles, Shuffle } from 'lucide-react';
+import { Volume2, Mic, Smartphone, Check, Sparkles } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { loadVoiceSettings, saveVoiceSettings, announceTurnScore, getAvailableVoices } from '../../utils/voiceCaller';
 import type { VoiceSettings } from '../../utils/voiceCaller';
 import { useSound } from '../../context/SoundContext';
-import { useGame } from '../../context/GameContext';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenSupabase: () => void;
+  onOpenSupabase?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
-  onClose,
-  onOpenSupabase
+  onClose
 }) => {
   const sound = useSound();
-  const { randomizeOrder, setRandomizeOrder } = useGame();
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(() => loadVoiceSettings());
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
@@ -51,29 +48,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Réglages & Préférences" maxWidth="max-w-md">
       <div className="space-y-4 py-1">
-        {/* General Gameplay Preferences */}
-        <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Préférences de Jeu
-          </h4>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Shuffle className="w-4 h-4 text-emerald-400" />
-              <div>
-                <div className="text-xs font-bold text-white">Ordre aléatoire des tours</div>
-                <div className="text-[10px] text-slate-400">Mélange l'ordre de passage entre les parties</div>
-              </div>
-            </div>
-            <input
-              type="checkbox"
-              checked={randomizeOrder}
-              onChange={(e) => setRandomizeOrder(e.target.checked)}
-              className="w-5 h-5 accent-emerald-500 rounded cursor-pointer"
-            />
-          </div>
-        </div>
-
         {/* Voice Caller Section */}
         <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
@@ -191,27 +165,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-5 h-5 accent-emerald-500 rounded cursor-pointer"
             />
           </div>
-        </div>
-
-        {/* Cloud & Supabase Link */}
-        <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-emerald-400" />
-            <div>
-              <div className="text-xs font-bold text-white">Synchronisation Cloud Supabase</div>
-              <div className="text-[10px] text-slate-400">Partage de données en temps réel</div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              onOpenSupabase();
-            }}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow transition-all"
-          >
-            Configurer
-          </button>
         </div>
 
         {savedSuccess && (
