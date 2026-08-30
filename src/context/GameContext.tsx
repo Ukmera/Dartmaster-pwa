@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import type {
   GameMode,
@@ -13,6 +13,7 @@ import type {
   PendingCricketChoice
 } from '../types/game';
 import type { DartThrow, Multiplier } from '../types/dart';
+import type { Player } from '../types/player';
 import { usePlayers } from './PlayerContext';
 import { useSound } from './SoundContext';
 import {
@@ -86,12 +87,21 @@ interface GameContextType {
 const GameContext = createContext<GameContextType | null>(null);
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { players, selectedPlayerIds, setSelectedPlayerIds, shuffleSelectedPlayers, rotateSelectedPlayers, updateStatsState } = usePlayers();
+  const { players, selectedPlayerIds, setSelectedPlayerIds, updateStatsState } = usePlayers();
   const sound = useSound();
 
   const [mode, setMode] = useState<GameMode>('501');
   const [status, setStatus] = useState<GameStatus>('setup');
-  const [randomizeOrder, setRandomizeOrder] = useState<boolean>(true);
+  const [randomizeOrder, setRandomizeOrder] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem('dartmaster_random_order');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleSetRandomizeOrder = (val: boolean) => {
+    setRandomizeOrder(val);
+    localStorage.setItem('dartmaster_random_order', String(val));
+  };
 
   const [x01Config, setX01Config] = useState<X01Config>({
     startingScore: 501,
@@ -129,7 +139,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const historyStack = useRef<GameStateSnapshot[]>([]);
   const matchStartTime = useRef<number>(Date.now());
 
-  const activePlayers = players.filter((p) => selectedPlayerIds.includes(p.id));
+  // CRITICAL FIX: Active players MUST follow selectedPlayerIds exact order!
+  const activePlayers = useMemo(() => {
+    return selectedPlayerIds
+      .map((id) => players.find((p) => p.id === id))
+      .filter((p): p is Player => !!p);
+  }, [selectedPlayerIds, players]);
 
   const saveSnapshot = useCallback(() => {
     historyStack.current.push({
@@ -160,11 +175,40 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     podiumWinners
   ]);
 
-  const initGameStates = useCallback(() => {
+  const startNewGame = useCallback(() => {
+    if (selectedPlayerIds.length === 0) return;
+
+    let orderedIds = [...selectedPlayerIds];
+
+    if (randomizeOrder && orderedIds.length > 1) {
+      // Shuffle order
+      orderedIds = [...orderedIds].sort(() => Math.random() - 0.5);
+      setSelectedPlayerIds(orderedIds);
+    } else if (!randomizeOrder && orderedIds.length > 1) {
+      // Rotate order
+      const [first, ...rest] = orderedIds;
+      orderedIds = [...rest, first];
+      setSelectedPlayerIds(orderedIds);
+    }
+
+    const currentParticipants = orderedIds
+      .map((id) => players.find((p) => p.id === id))
+      .filter((p): p is Player => !!p);
+
+    historyStack.current = [];
+    matchStartTime.current = Date.now();
+    setCurrentPlayerIndex(0);
+    setCurrentDarts([]);
+    setRoundIndex(1);
+    setCurrentLeg(1);
+    setWinnerId(null);
+    setPodiumWinners([]);
+    setPendingCricketChoice(null);
+
     if (mode === '301' || mode === '501' || mode === '701') {
       const startingScore = mode === '301' ? 301 : mode === '701' ? 701 : 501;
       const initialX01: Record<string, X01PlayerState> = {};
-      activePlayers.forEach((p) => {
+      currentParticipants.forEach((p) => {
         initialX01[p.id] = {
           playerId: p.id,
           currentScore: startingScore,
@@ -183,7 +227,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setX01States(initialX01);
     } else if (mode === 'cricket') {
       const initialCricket: Record<string, CricketPlayerState> = {};
-      activePlayers.forEach((p) => {
+      currentParticipants.forEach((p) => {
         initialCricket[p.id] = {
           playerId: p.id,
           points: 0,
@@ -199,7 +243,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCricketStates(initialCricket);
     } else if (mode === 'king') {
       const initialKing: Record<string, KingPlayerState> = {};
-      activePlayers.forEach((p) => {
+      currentParticipants.forEach((p) => {
         initialKing[p.id] = {
           playerId: p.id,
           assignedNumber: null,
@@ -217,30 +261,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       setKingStates(initialKing);
     }
-  }, [activePlayers, mode]);
 
-  const startNewGame = useCallback(() => {
-    if (activePlayers.length === 0) return;
-
-    if (randomizeOrder && activePlayers.length > 1) {
-      shuffleSelectedPlayers();
-    } else if (!randomizeOrder && activePlayers.length > 1) {
-      rotateSelectedPlayers();
-    }
-
-    historyStack.current = [];
-    matchStartTime.current = Date.now();
-    setCurrentPlayerIndex(0);
-    setCurrentDarts([]);
-    setRoundIndex(1);
-    setCurrentLeg(1);
-    setWinnerId(null);
-    setPodiumWinners([]);
-    setPendingCricketChoice(null);
-
-    initGameStates();
     setStatus('in_progress');
-  }, [activePlayers, randomizeOrder, shuffleSelectedPlayers, rotateSelectedPlayers, initGameStates]);
+  }, [selectedPlayerIds, players, randomizeOrder, setSelectedPlayerIds, mode]);
 
   const quitGame = () => {
     setStatus('setup');
@@ -252,7 +275,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     historyStack.current = [];
   };
 
-  // Declare match winner & celebrate
   const declareWinner = useCallback(
     async (winId: string, podium?: { playerId: string; rank: number }[]) => {
       setWinnerId(winId);
@@ -324,7 +346,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [mode, activePlayers, roundIndex, sound, x01States, cricketStates, kingStates, updateStatsState]
   );
 
-  // Advance to next leg in multi-legs match
   const startNextLeg = useCallback(
     (legWinnerId: string) => {
       sound.playVictory();
@@ -384,7 +405,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [mode, sound]
   );
 
-  // Add a player in the middle of a game
   const addPlayerMidGame = (newPlayerId: string) => {
     saveSnapshot();
     if (!selectedPlayerIds.includes(newPlayerId)) {
@@ -446,7 +466,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Move to next player in rotation
   const nextPlayer = useCallback(
     (customKingStates?: Record<string, KingPlayerState>, customCricketStates?: Record<string, CricketPlayerState>) => {
       setCurrentDarts([]);
@@ -501,6 +520,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleX01Dart = (dart: DartThrow) => {
     saveSnapshot();
     const curPlayer = activePlayers[currentPlayerIndex];
+    if (!curPlayer) return;
     const pState = { ...x01States[curPlayer.id] };
     const updatedDarts = [...currentDarts, dart];
 
@@ -609,6 +629,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     saveSnapshot();
     const curPlayer = activePlayers[currentPlayerIndex];
+    if (!curPlayer) return;
     const pState = { ...x01States[curPlayer.id] };
 
     if (currentDarts.length > 0) {
@@ -708,6 +729,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ) => {
     saveSnapshot();
     const curPlayer = activePlayers[currentPlayerIndex];
+    if (!curPlayer) return;
     const updatedCricket = { ...cricketStates };
     const pState = { ...updatedCricket[curPlayer.id] };
     const updatedDarts = [...currentDarts, dart];
@@ -727,8 +749,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (cricketConfig.cutThroat) {
         activePlayers.forEach((opp) => {
-          if (opp.id !== curPlayer.id && !updatedCricket[opp.id].hasFinished) {
-            const oppMarks = updatedCricket[opp.id].marks[targetKey] || 0;
+          if (opp.id !== curPlayer.id && !updatedCricket[opp.id]?.hasFinished) {
+            const oppMarks = updatedCricket[opp.id]?.marks[targetKey] || 0;
             if (oppMarks < 3) {
               updatedCricket[opp.id] = {
                 ...updatedCricket[opp.id],
@@ -739,7 +761,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else {
         const isTargetOpenForAnyOpponent = activePlayers.some(
-          (opp) => opp.id !== curPlayer.id && !updatedCricket[opp.id].hasFinished && (updatedCricket[opp.id]?.marks[targetKey] || 0) < 3
+          (opp) => opp.id !== curPlayer.id && !updatedCricket[opp.id]?.hasFinished && (updatedCricket[opp.id]?.marks[targetKey] || 0) < 3
         );
         if (isTargetOpenForAnyOpponent) {
           pState.points += pointsToAdd;
@@ -754,7 +776,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (hasClosedAll && !pState.hasFinished) {
       let isWinner = false;
       const activeUnfinishedOpponents = activePlayers.filter(
-        (p) => p.id !== curPlayer.id && !updatedCricket[p.id].hasFinished
+        (p) => p.id !== curPlayer.id && !updatedCricket[p.id]?.hasFinished
       );
 
       if (cricketConfig.cutThroat) {
@@ -793,7 +815,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
         } else {
-          const remaining = activePlayers.filter((p) => !updatedCricket[p.id].hasFinished);
+          const remaining = activePlayers.filter((p) => !updatedCricket[p.id]?.hasFinished);
           if (remaining.length <= 1) {
             declareWinner(podiumWinners[0]?.playerId || curPlayer.id, newPodium);
             return;
@@ -812,6 +834,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const recordDirectCricketMark = (lineKey: 'D' | 'T') => {
     if (status !== 'in_progress') return;
     const curPlayer = activePlayers[currentPlayerIndex];
+    if (!curPlayer) return;
     const pState = cricketStates[curPlayer.id];
     if (!pState) return;
 
@@ -831,6 +854,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const handleCricketDart = (dart: DartThrow) => {
     const curPlayer = activePlayers[currentPlayerIndex];
+    if (!curPlayer) return;
     const pState = cricketStates[curPlayer.id];
     if (!pState) return;
 
@@ -961,6 +985,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleKingDart = (dart: DartThrow) => {
     saveSnapshot();
     const curPlayer = activePlayers[currentPlayerIndex];
+    if (!curPlayer) return;
     const updatedKing = { ...kingStates };
     const pState = { ...updatedKing[curPlayer.id] };
     const updatedDarts = [...currentDarts, dart];
@@ -1022,7 +1047,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sound.playEliminated();
         updatedKing[curPlayer.id] = pState;
 
-        const survivors = activePlayers.filter((p) => !updatedKing[p.id].isEliminated);
+        const survivors = activePlayers.filter((p) => !updatedKing[p.id]?.isEliminated);
         if (survivors.length <= 1) {
           const legWinnerId = survivors[0]?.id || curPlayer.id;
           const newLegs = (updatedKing[legWinnerId]?.legsWon || 0) + 1;
@@ -1092,7 +1117,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cricketConfig,
         kingConfig,
         randomizeOrder,
-        setRandomizeOrder,
+        setRandomizeOrder: handleSetRandomizeOrder,
         setMode,
         setX01Config,
         setCricketConfig,

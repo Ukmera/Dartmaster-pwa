@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Undo2, Check, Zap, Hash, CircleDot } from 'lucide-react';
+import { Check, Zap, Hash, CircleDot, RotateCcw } from 'lucide-react';
 import type { Multiplier, DartThrow } from '../../types/dart';
 
 interface DartKeypadProps {
@@ -25,16 +25,15 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
 
   const handleNumberClick = (num: number) => {
     onDartThrow(num, multiplier);
-    // Reset multiplier back to 1 for quick next throw
     setMultiplier(1);
   };
 
   const handleBullClick = (isDouble: boolean) => {
-    if (multiplier === 3) return; // Triple Bull doesn't exist
+    if (multiplier === 3) return;
     if (isDouble) {
-      onDartThrow(25, 2); // 50 pts
+      onDartThrow(25, 2);
     } else {
-      onDartThrow(25, 1); // 25 pts
+      onDartThrow(25, 1);
     }
     setMultiplier(1);
   };
@@ -56,18 +55,18 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
   const quickScores = [26, 41, 45, 60, 81, 85, 100, 140, 180];
 
   return (
-    <div className="w-full glass-panel rounded-3xl p-3 sm:p-4 border border-slate-700/80 shadow-2xl flex flex-col gap-3">
-      {/* Current Turn Status & Undo */}
+    <div className="w-full glass-panel rounded-3xl p-2.5 sm:p-4 border border-slate-700/80 shadow-2xl flex flex-col gap-2.5">
+      {/* Current Turn Status & Vibrant Intuitive Undo Button */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Volée :</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Volée :</span>
           <div className="flex items-center gap-1.5">
             {[0, 1, 2].map((idx) => {
               const dart = currentDarts[idx];
               return (
                 <div
                   key={idx}
-                  className={`min-w-[46px] h-8 px-2 rounded-xl flex items-center justify-center font-bold text-xs border transition-all ${
+                  className={`min-w-[42px] sm:min-w-[46px] h-7 sm:h-8 px-2 rounded-xl flex items-center justify-center font-black text-xs border transition-all ${
                     dart
                       ? dart.multiplier === 3
                         ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
@@ -76,7 +75,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
                         : dart.sector === 0
                         ? 'bg-slate-800 border-slate-700 text-slate-500'
                         : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
-                      : 'bg-slate-800/60 border-slate-700/60 text-slate-500 border-dashed'
+                      : 'bg-slate-900/60 border-slate-800 text-slate-600 border-dashed'
                   }`}
                 >
                   {dart ? dart.label : `#${idx + 1}`}
@@ -86,19 +85,20 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
           </div>
         </div>
 
-        {/* Persistent Undo Button */}
+        {/* Highlighted & Intuitive Undo Button (Amber Neon) */}
         <button
           onClick={onUndo}
           disabled={!canUndo}
           aria-label="Annuler le dernier coup"
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black border transition-all active:scale-95 ${
             canUndo
-              ? 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700 hover:text-white active:scale-95 shadow-md'
-              : 'bg-slate-800/30 border-slate-800 text-slate-600 cursor-not-allowed'
+              ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 border-amber-300 shadow-lg glow-amber cursor-pointer'
+              : 'bg-slate-900/80 border-slate-800 text-slate-600 cursor-not-allowed opacity-40'
           }`}
+          title="Annuler la dernière flèche / score"
         >
-          <Undo2 className="w-3.5 h-3.5" />
-          <span>Annuler</span>
+          <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Annuler (Undo)</span>
         </button>
       </div>
 
@@ -107,7 +107,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
         <div className="flex rounded-xl bg-slate-950/60 p-1 border border-slate-800">
           <button
             onClick={() => setActiveTab('keypad')}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            className={`flex-1 py-1 sm:py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'keypad'
                 ? 'bg-emerald-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-200'
@@ -118,7 +118,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
           </button>
           <button
             onClick={() => setActiveTab('quick')}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+            className={`flex-1 py-1 sm:py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               activeTab === 'quick'
                 ? 'bg-emerald-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-200'
@@ -133,10 +133,10 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
       {activeTab === 'keypad' ? (
         <>
           {/* Multiplier Selectors (Simple, Double, Triple) */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             <button
               onClick={() => setMultiplier(1)}
-              className={`py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm tracking-wide border transition-all active:scale-95 ${
+              className={`py-1.5 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm tracking-wide border transition-all active:scale-95 ${
                 multiplier === 1
                   ? 'bg-emerald-600 border-emerald-400 text-white shadow-lg glow-emerald'
                   : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
@@ -146,7 +146,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
             </button>
             <button
               onClick={() => setMultiplier(2)}
-              className={`py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm tracking-wide border transition-all active:scale-95 ${
+              className={`py-1.5 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm tracking-wide border transition-all active:scale-95 ${
                 multiplier === 2
                   ? 'bg-rose-600 border-rose-400 text-white shadow-lg glow-rose'
                   : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
@@ -156,7 +156,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
             </button>
             <button
               onClick={() => setMultiplier(3)}
-              className={`py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm tracking-wide border transition-all active:scale-95 ${
+              className={`py-1.5 sm:py-2.5 rounded-xl font-black text-xs sm:text-sm tracking-wide border transition-all active:scale-95 ${
                 multiplier === 3
                   ? 'bg-amber-600 border-amber-400 text-white shadow-lg glow-amber'
                   : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
@@ -174,7 +174,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
                 <button
                   key={num}
                   onClick={() => handleNumberClick(num)}
-                  className={`h-11 sm:h-13 rounded-2xl flex flex-col items-center justify-center font-black transition-all active:scale-95 border ${
+                  className={`h-10 sm:h-12 rounded-2xl flex flex-col items-center justify-center font-black transition-all active:scale-95 border ${
                     multiplier === 3
                       ? 'bg-amber-950/30 border-amber-500/40 text-amber-200 hover:bg-amber-900/40'
                       : multiplier === 2
@@ -184,7 +184,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
                 >
                   <span className="text-base sm:text-lg leading-none">{num}</span>
                   {multiplier > 1 && (
-                    <span className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
+                    <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium leading-none mt-0.5">
                       ={previewPoints}
                     </span>
                   )}
@@ -194,11 +194,11 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
           </div>
 
           {/* Special Targets: Bull 25, Bullseye 50, Miss 0 */}
-          <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-0.5">
             <button
               onClick={() => handleBullClick(false)}
               disabled={multiplier === 3}
-              className={`h-11 sm:h-12 rounded-2xl border font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all ${
+              className={`h-10 sm:h-11 rounded-2xl border font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all ${
                 multiplier === 3
                   ? 'bg-slate-950/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-40'
                   : 'bg-emerald-950/40 border-emerald-500/50 hover:bg-emerald-900/50 text-emerald-300'
@@ -211,7 +211,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
             <button
               onClick={() => handleBullClick(true)}
               disabled={multiplier === 3}
-              className={`h-11 sm:h-12 rounded-2xl border font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all ${
+              className={`h-10 sm:h-11 rounded-2xl border font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all ${
                 multiplier === 3
                   ? 'bg-slate-950/40 border-slate-800 text-slate-600 cursor-not-allowed opacity-40'
                   : 'bg-rose-950/40 border-rose-500/50 hover:bg-rose-900/50 text-rose-300 shadow-lg glow-rose'
@@ -223,7 +223,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
 
             <button
               onClick={handleMissClick}
-              className="h-11 sm:h-12 rounded-2xl bg-slate-900 border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-bold text-xs sm:text-sm flex items-center justify-center active:scale-95 transition-all"
+              className="h-10 sm:h-11 rounded-2xl bg-slate-900 border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200 font-bold text-xs sm:text-sm flex items-center justify-center active:scale-95 transition-all"
             >
               <span>Manqué (0)</span>
             </button>
@@ -231,7 +231,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
         </>
       ) : (
         /* Quick Scores Tab */
-        <div className="flex flex-col gap-3 py-1">
+        <div className="flex flex-col gap-2.5 py-1">
           {currentDarts.length > 0 && (
             <div className="px-3 py-1.5 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-300 text-xs font-semibold flex items-center justify-between">
               <span>⚠️ Volée en cours ({currentDarts.length} flèche{currentDarts.length > 1 ? 's' : ''})</span>
@@ -248,12 +248,12 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
               placeholder="Score de la volée (0-180)..."
               value={customScoreInput}
               onChange={(e) => setCustomScoreInput(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              className="flex-1 px-4 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
             <button
               type="submit"
               disabled={!customScoreInput}
-              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold text-sm flex items-center gap-1.5 transition-all"
+              className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold text-sm flex items-center gap-1.5 transition-all"
             >
               <Check className="w-4 h-4" />
               <span>Valider</span>
@@ -266,7 +266,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
               <button
                 key={score}
                 onClick={() => onQuickScore && onQuickScore(score)}
-                className={`py-3 rounded-2xl font-black text-base border transition-all active:scale-95 ${
+                className={`py-2.5 rounded-2xl font-black text-base border transition-all active:scale-95 ${
                   score === 180
                     ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white border-amber-400 shadow-lg glow-amber'
                     : score >= 100

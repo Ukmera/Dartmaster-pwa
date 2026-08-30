@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Crown, Skull, Shuffle, Undo2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Crown, Skull, Shuffle, RotateCcw, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { usePlayers } from '../../context/PlayerContext';
 import type { Multiplier } from '../../types/dart';
+import type { Player } from '../../types/player';
 
 // Component to draw the dynamic 'K' (1 = |, 2 = |\, 3 = K)
 const LetterKVisualizer: React.FC<{ lives: number; isKing: boolean; isEliminated: boolean }> = ({
@@ -12,17 +13,17 @@ const LetterKVisualizer: React.FC<{ lives: number; isKing: boolean; isEliminated
 }) => {
   if (isEliminated) {
     return (
-      <div className="w-12 h-12 rounded-2xl bg-rose-950/40 border border-rose-500/40 flex items-center justify-center text-rose-400">
-        <Skull className="w-6 h-6" />
+      <div className="w-10 h-10 rounded-2xl bg-rose-950/40 border border-rose-500/40 flex items-center justify-center text-rose-400">
+        <Skull className="w-5 h-5" />
       </div>
     );
   }
 
   if (lives < 0) {
     return (
-      <div className="w-12 h-12 rounded-2xl bg-rose-950/60 border border-rose-500 flex flex-col items-center justify-center text-rose-400 shadow-md animate-pulse">
-        <span className="text-xs font-black">VIES</span>
-        <span className="text-sm font-black text-white">{lives}</span>
+      <div className="w-10 h-10 rounded-2xl bg-rose-950/60 border border-rose-500 flex flex-col items-center justify-center text-rose-400 shadow-md animate-pulse">
+        <span className="text-[9px] font-black">VIES</span>
+        <span className="text-xs font-black text-white">{lives}</span>
       </div>
     );
   }
@@ -34,7 +35,7 @@ const LetterKVisualizer: React.FC<{ lives: number; isKing: boolean; isEliminated
 
   return (
     <div
-      className={`w-12 h-12 rounded-2xl p-1.5 flex items-center justify-center border transition-all ${
+      className={`w-10 h-10 rounded-2xl p-1 flex items-center justify-center border transition-all ${
         isKing
           ? 'bg-amber-950/40 border-amber-400 shadow-lg glow-amber'
           : lives > 0
@@ -106,7 +107,9 @@ export const KingGame: React.FC = () => {
   } = useGame();
 
   const { players, selectedPlayerIds } = usePlayers();
-  const activePlayers = players.filter((p) => selectedPlayerIds.includes(p.id));
+  const activePlayers = selectedPlayerIds
+    .map((id) => players.find((p) => p.id === id))
+    .filter((p): p is Player => !!p);
   const currentPlayer = activePlayers[currentPlayerIndex];
   const curState = currentPlayer ? kingStates[currentPlayer.id] : null;
 
@@ -132,29 +135,29 @@ export const KingGame: React.FC = () => {
     ];
 
     return (
-      <div className="max-w-2xl mx-auto glass-panel rounded-3xl p-5 border border-slate-700/80 shadow-2xl space-y-5">
+      <div className="max-w-2xl mx-auto glass-panel rounded-3xl p-4 sm:p-5 border border-slate-700/80 shadow-2xl space-y-4">
         <div className="text-center space-y-1">
-          <div className="inline-flex p-3 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-1">
-            <Crown className="w-8 h-8" />
+          <div className="inline-flex p-2.5 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-1">
+            <Crown className="w-6 h-6" />
           </div>
-          <h2 className="text-xl font-black text-white">Attribution des Numéros King</h2>
+          <h2 className="text-lg font-black text-white">Attribution des Numéros King</h2>
           <p className="text-xs text-slate-400">
             Chaque joueur doit obtenir son numéro de 1 à 20 ou le <strong>Centre (Bull/25)</strong> par tir main faible.
           </p>
         </div>
 
         {/* Current Player Assigning Box */}
-        <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/40 text-center space-y-2">
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/40 text-center space-y-2">
           <div className="flex items-center justify-center gap-2">
-            <span className="text-3xl">{activeAssignee.avatar}</span>
-            <span className="text-lg font-black text-white">{activeAssignee.name}</span>
+            <span className="text-2xl">{activeAssignee.avatar}</span>
+            <span className="text-base font-black text-white">{activeAssignee.name}</span>
           </div>
           <p className="text-xs text-emerald-400 font-semibold">
             🎯 Effectuez le tir main faible et sélectionnez le numéro touché :
           </p>
 
           {/* Numbers 1-20 Grid + Bull */}
-          <div className="grid grid-cols-5 sm:grid-cols-7 gap-2 pt-2">
+          <div className="grid grid-cols-5 sm:grid-cols-7 gap-1.5 pt-1">
             {allAssignableTargets.map((num) => {
               const isTaken = assignedNumbers.includes(num);
               const owner = isTaken ? activePlayers.find((p) => kingStates[p.id]?.assignedNumber === num) : null;
@@ -167,7 +170,7 @@ export const KingGame: React.FC = () => {
                     assignKingNumber(activeAssignee.id, num);
                     setAssigningPlayerId(null);
                   }}
-                  className={`h-12 rounded-xl font-black text-base flex flex-col items-center justify-center border transition-all ${
+                  className={`h-11 rounded-xl font-black text-sm flex flex-col items-center justify-center border transition-all ${
                     isTaken
                       ? 'bg-slate-950/60 border-slate-800 text-slate-600 cursor-not-allowed'
                       : num === 25
@@ -177,7 +180,7 @@ export const KingGame: React.FC = () => {
                 >
                   <span>{num === 25 ? 'BULL' : num}</span>
                   {owner && (
-                    <span className="text-[9px] text-slate-400 truncate max-w-[40px]">
+                    <span className="text-[8px] text-slate-400 truncate max-w-[36px]">
                       {owner.name}
                     </span>
                   )}
@@ -188,10 +191,10 @@ export const KingGame: React.FC = () => {
         </div>
 
         {/* Auto Assign button */}
-        <div className="flex justify-center pt-2">
+        <div className="flex justify-center pt-1">
           <button
             onClick={autoAssignKingNumbers}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs border border-slate-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs border border-slate-700 transition-colors"
           >
             <Shuffle className="w-4 h-4 text-amber-400" />
             <span>Tirage Aléatoire Rapide pour tous</span>
@@ -205,19 +208,19 @@ export const KingGame: React.FC = () => {
   const anyKingActive = Object.values(kingStates).some((s) => s.isKing && !s.isEliminated);
 
   return (
-    <div className="flex flex-col gap-3 max-w-5xl mx-auto">
+    <div className="flex flex-col gap-2 max-w-5xl mx-auto">
       {/* Active player in danger alert */}
       {curState?.isInDanger && !curState.isEliminated && anyKingActive && (
-        <div className="px-4 py-2.5 rounded-2xl bg-rose-950/70 border border-rose-500 text-rose-200 flex items-center justify-between animate-pulse">
-          <div className="flex items-center gap-2 text-xs font-bold">
-            <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
-            <span>⚠️ DROIT DE RÉPONSE EN COURS : Vous êtes à {curState.lives} vie(s) ! Visez votre numéro (#{curState.assignedNumber === 25 ? 'BULL' : curState.assignedNumber}) pour remonter à au moins 1 vie.</span>
+        <div className="px-3 py-2 rounded-2xl bg-rose-950/70 border border-rose-500 text-rose-200 flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-1.5 text-xs font-bold">
+            <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>⚠️ DROIT DE RÉPONSE : Visez votre numéro (#{curState.assignedNumber === 25 ? 'BULL' : curState.assignedNumber}) pour remonter à $\ge 1$ vie !</span>
           </div>
         </div>
       )}
 
       {/* Player Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {activePlayers.map((player, idx) => {
           const state = kingStates[player.id];
           const isActive = idx === currentPlayerIndex;
@@ -228,7 +231,7 @@ export const KingGame: React.FC = () => {
           return (
             <div
               key={player.id}
-              className={`p-4 rounded-3xl border transition-all relative flex flex-col justify-between ${
+              className={`p-3 rounded-2xl border transition-all relative flex flex-col justify-between ${
                 isEliminated
                   ? 'bg-slate-950/40 border-slate-800/60 opacity-40'
                   : isActive
@@ -238,23 +241,23 @@ export const KingGame: React.FC = () => {
             >
               {/* Header with Name, Avatar & Letter K Visualizer */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
+                <div className="flex items-center space-x-2 truncate">
                   <div className="relative">
-                    <span className="text-2xl">{player.avatar}</span>
+                    <span className="text-xl">{player.avatar}</span>
                     {isKing && !isEliminated && (
-                      <span className="absolute -top-2 -right-2 text-sm animate-bounce">👑</span>
+                      <span className="absolute -top-2 -right-2 text-xs animate-bounce">👑</span>
                     )}
                   </div>
                   <div>
-                    <h3 className="font-bold text-base text-white flex items-center gap-1.5">
+                    <h3 className="font-bold text-sm text-white flex items-center gap-1">
                       {player.name}
                       {isKing && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
                           KING
                         </span>
                       )}
                     </h3>
-                    <span className="text-xs font-black text-amber-400">
+                    <span className="text-[11px] font-black text-amber-400">
                       Cible : #{state?.assignedNumber === 25 ? 'BULL' : state?.assignedNumber || '?'}
                     </span>
                   </div>
@@ -265,33 +268,33 @@ export const KingGame: React.FC = () => {
               </div>
 
               {/* Status Bar */}
-              <div className="my-3 py-2 px-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs">
+              <div className="my-2 py-1.5 px-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between text-xs">
                 {isEliminated ? (
-                  <span className="text-rose-400 font-bold flex items-center gap-1">
-                    <Skull className="w-3.5 h-3.5" /> Éliminé
+                  <span className="text-rose-400 font-bold flex items-center gap-1 text-[11px]">
+                    <Skull className="w-3 h-3" /> Éliminé
                   </span>
                 ) : isKing ? (
-                  <span className="text-amber-300 font-black flex items-center gap-1">
-                    <Crown className="w-3.5 h-3.5" /> King Actif (3/3 Vies)
+                  <span className="text-amber-300 font-black flex items-center gap-1 text-[11px]">
+                    <Crown className="w-3 h-3" /> King Actif (3/3 Vies)
                   </span>
                 ) : lives <= 0 ? (
-                  <span className="text-rose-400 font-bold flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" /> En sursis ({lives} vies)
+                  <span className="text-rose-400 font-bold flex items-center gap-1 text-[11px]">
+                    <AlertTriangle className="w-3 h-3" /> En sursis ({lives} vies)
                   </span>
                 ) : (
-                  <span className="text-slate-300 font-semibold">
-                    K en cours : {lives}/3 touches
+                  <span className="text-slate-300 font-semibold text-[11px]">
+                    K : {lives}/3 touches
                   </span>
                 )}
 
-                <span className="text-slate-400 font-mono text-[11px]">
+                <span className="text-slate-400 font-mono text-[10px]">
                   {lives} vie{Math.abs(lives) > 1 ? 's' : ''}
                 </span>
               </div>
 
               {/* Turn indicator */}
               {isActive && !isEliminated && (
-                <div className="text-[11px] font-bold text-emerald-400 text-center uppercase tracking-wider">
+                <div className="text-[10px] font-bold text-emerald-400 text-center uppercase tracking-wider">
                   ▶ Tour en cours ({3 - currentDarts.length} flèches)
                 </div>
               )}
@@ -301,21 +304,21 @@ export const KingGame: React.FC = () => {
       </div>
 
       {/* King Action Panel */}
-      <div className="glass-panel rounded-3xl p-3 sm:p-4 border border-slate-700/80 shadow-2xl flex flex-col gap-3">
-        {/* Volée & Undo */}
+      <div className="glass-panel rounded-3xl p-2.5 sm:p-3 border border-slate-700/80 shadow-xl flex flex-col gap-2.5">
+        {/* Volée & Vibrant Undo */}
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Volée :</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Volée :</span>
             <div className="flex items-center gap-1.5">
               {[0, 1, 2].map((idx) => {
                 const dart = currentDarts[idx];
                 return (
                   <div
                     key={idx}
-                    className={`min-w-[46px] h-8 px-2 rounded-xl flex items-center justify-center font-bold text-xs border transition-all ${
+                    className={`min-w-[42px] sm:min-w-[46px] h-7 sm:h-8 px-2 rounded-xl flex items-center justify-center font-bold text-xs border transition-all ${
                       dart
                         ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                        : 'bg-slate-800/60 border-slate-700/60 text-slate-500 border-dashed'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-600 border-dashed'
                     }`}
                   >
                     {dart ? dart.label : `#${idx + 1}`}
@@ -328,22 +331,22 @@ export const KingGame: React.FC = () => {
           <button
             onClick={undoLastAction}
             disabled={!canUndo}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black border transition-all active:scale-95 ${
               canUndo
-                ? 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700 active:scale-95'
-                : 'bg-slate-800/30 border-slate-800 text-slate-600 cursor-not-allowed'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 border-amber-300 shadow-lg glow-amber cursor-pointer'
+                : 'bg-slate-900/80 border-slate-800 text-slate-600 cursor-not-allowed opacity-40'
             }`}
           >
-            <Undo2 className="w-3.5 h-3.5" />
-            <span>Annuler</span>
+            <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Annuler (Undo)</span>
           </button>
         </div>
 
         {/* Multiplier Selectors */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => setSelectedMultiplier(1)}
-            className={`py-2 rounded-xl font-bold text-xs tracking-wide border transition-all ${
+            className={`py-1.5 rounded-xl font-bold text-xs tracking-wide border transition-all ${
               selectedMultiplier === 1
                 ? 'bg-emerald-600 border-emerald-400 text-white shadow-lg glow-emerald'
                 : 'bg-slate-800/80 border-slate-700 text-slate-300'
@@ -353,7 +356,7 @@ export const KingGame: React.FC = () => {
           </button>
           <button
             onClick={() => setSelectedMultiplier(2)}
-            className={`py-2 rounded-xl font-bold text-xs tracking-wide border transition-all ${
+            className={`py-1.5 rounded-xl font-bold text-xs tracking-wide border transition-all ${
               selectedMultiplier === 2
                 ? 'bg-rose-600 border-rose-400 text-white shadow-lg glow-rose'
                 : 'bg-slate-800/80 border-slate-700 text-slate-300'
@@ -363,7 +366,7 @@ export const KingGame: React.FC = () => {
           </button>
           <button
             onClick={() => setSelectedMultiplier(3)}
-            className={`py-2 rounded-xl font-bold text-xs tracking-wide border transition-all ${
+            className={`py-1.5 rounded-xl font-bold text-xs tracking-wide border transition-all ${
               selectedMultiplier === 3
                 ? 'bg-amber-600 border-amber-400 text-white shadow-lg glow-amber'
                 : 'bg-slate-800/80 border-slate-700 text-slate-300'
@@ -374,14 +377,14 @@ export const KingGame: React.FC = () => {
         </div>
 
         {/* Attack / Qualification Targets */}
-        <div className="space-y-1.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
+        <div className="space-y-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
             {curState?.isKing
               ? '👑 Cibles disponibles pour attaque (K actifs) :'
               : `🎯 Touchez votre numéro (#${curState?.assignedNumber === 25 ? 'BULL' : curState?.assignedNumber}) pour compléter le K :`}
           </span>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
             {activePlayers.map((player) => {
               const pSt = kingStates[player.id];
               const isSelf = player.id === currentPlayer?.id;
@@ -398,7 +401,7 @@ export const KingGame: React.FC = () => {
                   key={player.id}
                   disabled={isEliminated || isTripleBullDisabled}
                   onClick={() => recordDart(targetNum, selectedMultiplier)}
-                  className={`p-2.5 rounded-2xl border flex items-center justify-between transition-all active:scale-95 ${
+                  className={`p-2 rounded-2xl border flex items-center justify-between transition-all active:scale-95 ${
                     isEliminated || isTripleBullDisabled
                       ? 'bg-slate-950/40 border-slate-800 opacity-40 cursor-not-allowed'
                       : isSelf
@@ -406,19 +409,19 @@ export const KingGame: React.FC = () => {
                       : 'bg-rose-950/30 border-rose-500/50 hover:bg-rose-900/40 text-rose-200'
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="text-lg">{player.avatar}</span>
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="text-base">{player.avatar}</span>
                     <div className="text-left truncate">
                       <div className="text-xs font-bold truncate">
                         {isSelf ? 'Moi (K)' : player.name}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[9px] text-slate-400">
                         {isSelf ? `${pSt?.lives}/3 K` : `${pSt?.lives} vies`}
                       </div>
                     </div>
                   </div>
 
-                  <span className="w-10 h-9 rounded-xl bg-slate-800 font-black text-sm text-white flex items-center justify-center shadow-md">
+                  <span className="w-9 h-8 rounded-xl bg-slate-800 font-black text-xs text-white flex items-center justify-center shadow">
                     {targetNum === 25 ? 'BULL' : targetNum}
                   </span>
                 </button>
@@ -428,7 +431,7 @@ export const KingGame: React.FC = () => {
             {/* Miss Button */}
             <button
               onClick={() => recordDart(0, 0)}
-              className="p-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800 font-bold text-xs flex items-center justify-center col-span-2 sm:col-span-1 active:scale-95 transition-all"
+              className="p-2 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:bg-slate-800 font-bold text-xs flex items-center justify-center col-span-2 sm:col-span-1 active:scale-95 transition-all"
             >
               Manqué (0)
             </button>

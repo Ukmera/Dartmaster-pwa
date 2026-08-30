@@ -1,4 +1,4 @@
-// Voice Caller service using Web Speech API with High Quality Voice selection
+// Voice Caller service using Web Speech API with High Quality Voice selection & Easter Eggs
 
 export interface VoiceSettings {
   enabled: boolean;
@@ -39,14 +39,13 @@ export function saveVoiceSettings(settings: VoiceSettings): void {
   }
 }
 
-// Get all available system voices for current language
 export function getAvailableVoices(langPrefix: string = 'fr'): SpeechSynthesisVoice[] {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return [];
   const voices = window.speechSynthesis.getVoices();
   return voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix.toLowerCase()));
 }
 
-// Announce turn score with energetic referee modulation
+// Announce turn score with energetic referee modulation & taunt if score < 10
 export function announceTurnScore(
   score: number,
   isBust: boolean = false,
@@ -61,11 +60,14 @@ export function announceTurnScore(
   let textToSpeak = '';
 
   if (isBust) {
-    textToSpeak = settings.language === 'en-GB' ? 'Bust !' : 'Bust !';
+    textToSpeak = settings.language === 'en-GB' ? 'Bust ! Poor throw !' : 'Bust ! ... Gros nul !';
   } else if (score === 180) {
     textToSpeak = settings.language === 'en-GB' ? 'ONE HUNDRED AND EIGHTY !' : 'CENT QUATRE-VINGTS !';
   } else if (score === 0) {
-    textToSpeak = settings.language === 'en-GB' ? 'No score' : 'Zéro point';
+    textToSpeak = settings.language === 'en-GB' ? 'Zero... Poor throw !' : 'Zéro point... Gros nul !';
+  } else if (score < 10) {
+    // Score under 10 taunt
+    textToSpeak = settings.language === 'en-GB' ? `${score}... Poor throw !` : `${score}... Gros nul !`;
   } else {
     textToSpeak = String(score);
   }
@@ -74,7 +76,7 @@ export function announceTurnScore(
   utterance.lang = settings.language;
   utterance.volume = settings.volume;
   utterance.rate = score === 180 ? 0.95 : settings.rate;
-  utterance.pitch = score === 180 ? 1.25 : settings.pitch;
+  utterance.pitch = score === 180 ? 1.25 : score < 10 ? 0.9 : settings.pitch;
 
   const voices = window.speechSynthesis.getVoices();
   
@@ -84,7 +86,6 @@ export function announceTurnScore(
       utterance.voice = selectedVoice;
     }
   } else {
-    // Pick the best natural/neural/Google voice automatically
     const langCode = settings.language.split('-')[0];
     const matchingVoices = voices.filter((v) => v.lang.toLowerCase().startsWith(langCode));
     const premiumVoice = matchingVoices.find(
