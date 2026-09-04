@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, VolumeX, Maximize, Minimize, Database, ShieldCheck } from 'lucide-react';
+import { Volume2, VolumeX, Maximize, Minimize, Share2 } from 'lucide-react';
 import { useSound } from '../../context/SoundContext';
-import { usePlayers } from '../../context/PlayerContext';
 
 interface HeaderProps {
   onOpenSettings: () => void;
+  onOpenShare?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenShare }) => {
   const { soundEnabled, toggleSound } = useSound();
-  const { isSupabaseConnected } = usePlayers();
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   useEffect(() => {
@@ -29,58 +28,56 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-4 py-2.5 transition-all">
+    <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-3 sm:px-4 py-2 transition-all">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Brand Logo */}
+        {/* Brand Logo with New HD Emblem */}
         <div className="flex items-center space-x-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-400 p-0.5 shadow-lg shadow-emerald-950/50 flex items-center justify-center">
-            <span className="text-xl">🎯</span>
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-400 p-[1.5px] shadow-lg glow-emerald flex items-center justify-center relative overflow-hidden group">
+            <img
+              src="/favicon.svg"
+              alt="DartMaster Logo"
+              className="w-full h-full object-contain rounded-[14px]"
+            />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
-              DartMaster <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold border border-emerald-500/30">PRO</span>
-            </h1>
-            <p className="text-[10px] text-slate-400 font-medium leading-none">Compteur PWA & Cloud</p>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-sm sm:text-base font-black tracking-tight text-white">
+                DartMaster
+              </h1>
+              <span className="text-[9px] sm:text-[10px] px-1.5 py-0.2 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-sm tracking-wide">
+                PRO
+              </span>
+            </div>
+            <p className="text-[9px] sm:text-[10px] text-slate-400 font-semibold leading-none">Compteur & Voice Caller</p>
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center space-x-1.5 sm:space-x-2">
-          {/* Supabase Status Indicator */}
-          <button
-            onClick={onOpenSettings}
-            title={isSupabaseConnected ? 'Supabase Connecté (Sync Active)' : 'Mode Local (Supabase non configuré)'}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-              isSupabaseConnected
-                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/50'
-                : 'bg-slate-800/60 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-            }`}
-          >
-            {isSupabaseConnected ? (
-              <>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">Cloud Sync</span>
-              </>
-            ) : (
-              <>
-                <Database className="w-3.5 h-3.5 text-slate-400" />
-                <span className="hidden sm:inline">Local</span>
-              </>
-            )}
-          </button>
+          {/* Share Button (Direct 1-Click) */}
+          {onOpenShare && (
+            <button
+              onClick={onOpenShare}
+              title="Partager l'application (QR Code / Lien)"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-emerald-400 hover:bg-slate-800 text-xs font-bold transition-all shadow-sm active:scale-95"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Partager</span>
+            </button>
+          )}
 
           {/* Sound Toggle */}
           <button
             onClick={toggleSound}
             aria-label={soundEnabled ? 'Désactiver le son' : 'Activer le son'}
             title={soundEnabled ? 'Son activé' : 'Son désactivé'}
-            className={`p-2 rounded-lg border transition-colors ${
+            className={`p-2 rounded-xl border transition-colors ${
               soundEnabled
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20'
                 : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
             }`}
           >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
           </button>
 
           {/* Fullscreen Toggle */}
@@ -88,9 +85,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
             title={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
-            className="p-2 rounded-lg bg-slate-800/80 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
           >
-            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+            {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>

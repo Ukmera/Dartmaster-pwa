@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Volume2, Mic, Smartphone, Check, Sparkles } from 'lucide-react';
+import { Volume2, Mic, Smartphone, Check, Sparkles, Share2 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { loadVoiceSettings, saveVoiceSettings, announceTurnScore, getAvailableVoices } from '../../utils/voiceCaller';
 import type { VoiceSettings } from '../../utils/voiceCaller';
@@ -8,12 +8,13 @@ import { useSound } from '../../context/SoundContext';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenSupabase?: () => void;
+  onOpenShare?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
-  onClose
+  onClose,
+  onOpenShare
 }) => {
   const sound = useSound();
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(() => loadVoiceSettings());
@@ -47,7 +48,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Réglages & Préférences" maxWidth="max-w-md">
-      <div className="space-y-4 py-1">
+      <div className="space-y-3.5 py-1">
+        {/* Share App Action Card */}
+        {onOpenShare && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/80 border border-emerald-500/40 shadow-lg flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300">
+                <Share2 className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="text-xs font-black text-white">Partager l'application</div>
+                <div className="text-[10px] text-slate-300">QR Code instantané & lien pour vos amis</div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenShare();
+              }}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-md glow-emerald active:scale-95 transition-all"
+            >
+              Inviter
+            </button>
+          </div>
+        )}
+
         {/* Voice Caller Section */}
         <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
@@ -77,7 +104,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onClick={() => handleVoiceChange('language', 'fr-FR')}
                     className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
                       voiceSettings.language === 'fr-FR'
-                        ? 'bg-emerald-600 border-emerald-400 text-white'
+                        ? 'bg-emerald-600 border-emerald-400 text-white shadow'
                         : 'bg-slate-900 border-slate-700 text-slate-400'
                     }`}
                   >
@@ -88,7 +115,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onClick={() => handleVoiceChange('language', 'en-GB')}
                     className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
                       voiceSettings.language === 'en-GB'
-                        ? 'bg-emerald-600 border-emerald-400 text-white'
+                        ? 'bg-emerald-600 border-emerald-400 text-white shadow'
                         : 'bg-slate-900 border-slate-700 text-slate-400'
                     }`}
                   >

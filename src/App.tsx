@@ -3,6 +3,7 @@ import { Header } from './components/common/Header';
 import { BottomNav } from './components/common/BottomNav';
 import type { NavTab } from './components/common/BottomNav';
 import { PwaInstallPrompt } from './components/common/PwaInstallPrompt';
+import { ShareModal } from './components/common/ShareModal';
 import { GameSetup } from './components/game/GameSetup';
 import { X01Game } from './components/modes/X01Game';
 import { CricketGame } from './components/modes/CricketGame';
@@ -11,7 +12,6 @@ import { PlayerList } from './components/players/PlayerList';
 import { Leaderboard } from './components/stats/Leaderboard';
 import { MatchHistory } from './components/stats/MatchHistory';
 import { MatchWinnerModal } from './components/game/MatchWinnerModal';
-import { SupabaseConfigModal } from './components/settings/SupabaseConfigModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { Modal } from './components/common/Modal';
 import { SoundProvider } from './context/SoundContext';
@@ -36,7 +36,7 @@ const MainAppContent: React.FC = () => {
   const { players, selectedPlayerIds } = usePlayers();
   const [activeTab, setActiveTab] = useState<NavTab>('game');
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState<boolean>(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [isAddMidGameModalOpen, setIsAddMidGameModalOpen] = useState<boolean>(false);
   const [pendingJoinPlayer, setPendingJoinPlayer] = useState<string | null>(null);
 
@@ -64,9 +64,9 @@ const MainAppContent: React.FC = () => {
   };
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] bg-[#070b14] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+    <div className="h-[100dvh] max-h-[100dvh] bg-[#060a14] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
       {/* Authentic Official Dartboard Graphic in Background (Right side bleed) */}
-      <div className="fixed -right-32 top-10 pointer-events-none opacity-[0.07] lg:opacity-[0.12] select-none z-0">
+      <div className="fixed -right-32 top-10 pointer-events-none opacity-[0.08] lg:opacity-[0.13] select-none z-0">
         <svg viewBox="0 0 500 500" className="w-[520px] h-[520px] drop-shadow-2xl">
           <circle cx="250" cy="250" r="240" fill="#0d1117" stroke="#30363d" strokeWidth="4" />
           <circle cx="250" cy="250" r="215" fill="#161b22" stroke="#484f58" strokeWidth="2" />
@@ -95,8 +95,11 @@ const MainAppContent: React.FC = () => {
         </svg>
       </div>
 
-      {/* Top Navigation Header */}
-      <Header onOpenSettings={() => setIsSettingsModalOpen(true)} />
+      {/* Top Navigation Header with HD Emblem & Share Button */}
+      <Header
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenShare={() => setIsShareModalOpen(true)}
+      />
 
       {/* PWA Install Banner */}
       <PwaInstallPrompt />
@@ -176,13 +179,13 @@ const MainAppContent: React.FC = () => {
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        onOpenSupabase={() => setIsSupabaseModalOpen(true)}
+        onOpenShare={() => setIsShareModalOpen(true)}
       />
 
-      {/* Supabase & Cloud Modal */}
-      <SupabaseConfigModal
-        isOpen={isSupabaseModalOpen}
-        onClose={() => setIsSupabaseModalOpen(false)}
+      {/* Share / QR Code Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
       />
 
       {/* Add Player Mid-Game Modal */}
