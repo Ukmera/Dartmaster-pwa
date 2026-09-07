@@ -12,6 +12,8 @@ export interface X01PlayerState {
   setsWon: number;
   dartsThrown: number;
   totalScoreScored: number;
+  legDartsThrown: number;
+  legScoreScored: number;
   first9DartsScore: number;
   first9DartsCount: number;
   checkoutOpportunities: number;

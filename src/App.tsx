@@ -65,33 +65,97 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="h-[100dvh] max-h-[100dvh] bg-[#060a14] text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
-      {/* Authentic Official Dartboard Graphic in Background (Right side bleed) */}
-      <div className="fixed -right-32 top-10 pointer-events-none opacity-[0.08] lg:opacity-[0.13] select-none z-0">
-        <svg viewBox="0 0 500 500" className="w-[520px] h-[520px] drop-shadow-2xl">
-          <circle cx="250" cy="250" r="240" fill="#0d1117" stroke="#30363d" strokeWidth="4" />
-          <circle cx="250" cy="250" r="215" fill="#161b22" stroke="#484f58" strokeWidth="2" />
-          <circle cx="250" cy="250" r="170" fill="none" stroke="#e11d48" strokeWidth="16" strokeDasharray="26.7 26.7" />
-          <circle cx="250" cy="250" r="170" fill="none" stroke="#059669" strokeWidth="16" strokeDasharray="26.7 26.7" strokeDashoffset="26.7" />
-          <circle cx="250" cy="250" r="135" fill="none" stroke="#0f172a" strokeWidth="54" strokeDasharray="21.2 21.2" />
-          <circle cx="250" cy="250" r="135" fill="none" stroke="#fef08a" strokeWidth="54" strokeDasharray="21.2 21.2" strokeDashoffset="21.2" opacity="0.3" />
-          <circle cx="250" cy="250" r="100" fill="none" stroke="#e11d48" strokeWidth="16" strokeDasharray="15.7 15.7" />
-          <circle cx="250" cy="250" r="100" fill="none" stroke="#059669" strokeWidth="16" strokeDasharray="15.7 15.7" strokeDashoffset="15.7" />
-          <circle cx="250" cy="250" r="65" fill="none" stroke="#0f172a" strokeWidth="54" strokeDasharray="10.2 10.2" />
-          <circle cx="250" cy="250" r="65" fill="none" stroke="#fef08a" strokeWidth="54" strokeDasharray="10.2 10.2" strokeDashoffset="10.2" opacity="0.3" />
-          <circle cx="250" cy="250" r="28" fill="#059669" stroke="#34d399" strokeWidth="2" />
-          <circle cx="250" cy="250" r="14" fill="#e11d48" stroke="#fb7185" strokeWidth="2" />
+      {/* 1. Luminous & Vibrant PDC Dartboard Graphic in Background (Right side bleed) */}
+      <div className="fixed -right-28 sm:-right-24 top-8 sm:top-10 pointer-events-none opacity-[0.22] lg:opacity-[0.28] select-none z-0">
+        <svg viewBox="0 0 500 500" className="w-[480px] sm:w-[580px] h-[480px] sm:h-[580px] drop-shadow-[0_0_35px_rgba(16,185,129,0.3)]">
+          {/* Outer Ring */}
+          <circle cx="250" cy="250" r="240" fill="#0d1117" stroke="#334155" strokeWidth="6" />
+          <circle cx="250" cy="250" r="215" fill="#111827" stroke="#475569" strokeWidth="3" />
+          
+          {/* Double Ring (Vibrant Red & Green) */}
+          <circle cx="250" cy="250" r="170" fill="none" stroke="#e11d48" strokeWidth="18" strokeDasharray="26.7 26.7" />
+          <circle cx="250" cy="250" r="170" fill="none" stroke="#059669" strokeWidth="18" strokeDasharray="26.7 26.7" strokeDashoffset="26.7" />
+          
+          {/* Single Outer (Dark & Vintage Cream) */}
+          <circle cx="250" cy="250" r="135" fill="none" stroke="#0f172a" strokeWidth="52" strokeDasharray="21.2 21.2" />
+          <circle cx="250" cy="250" r="135" fill="none" stroke="#fef08a" strokeWidth="52" strokeDasharray="21.2 21.2" strokeDashoffset="21.2" opacity="0.45" />
+
+          {/* Triple Ring (Vibrant Red & Green) */}
+          <circle cx="250" cy="250" r="100" fill="none" stroke="#e11d48" strokeWidth="18" strokeDasharray="15.7 15.7" />
+          <circle cx="250" cy="250" r="100" fill="none" stroke="#059669" strokeWidth="18" strokeDasharray="15.7 15.7" strokeDashoffset="15.7" />
+
+          {/* Single Inner */}
+          <circle cx="250" cy="250" r="65" fill="none" stroke="#0f172a" strokeWidth="52" strokeDasharray="10.2 10.2" />
+          <circle cx="250" cy="250" r="65" fill="none" stroke="#fef08a" strokeWidth="52" strokeDasharray="10.2 10.2" strokeDashoffset="10.2" opacity="0.45" />
+
+          {/* Outer Bull (25 - Green) */}
+          <circle cx="250" cy="250" r="28" fill="#059669" stroke="#34d399" strokeWidth="3" />
+
+          {/* Inner Bullseye (50 - Red) */}
+          <circle cx="250" cy="250" r="14" fill="#e11d48" stroke="#fecdd3" strokeWidth="3" />
+
+          {/* Spider Wire Spokes (Bright Platinum) */}
           {[0, 18, 36, 54, 72, 90, 108, 126, 144, 162, 180, 198, 216, 234, 252, 270, 288, 306, 324, 342].map((deg) => (
             <line
               key={deg}
               x1="250"
               y1="250"
-              x2={250 + 178 * Math.cos((deg * Math.PI) / 180)}
-              y2={250 + 178 * Math.sin((deg * Math.PI) / 180)}
-              stroke="#64748b"
-              strokeWidth="2"
-              opacity="0.6"
+              x2={250 + 179 * Math.cos((deg * Math.PI) / 180)}
+              y2={250 + 179 * Math.sin((deg * Math.PI) / 180)}
+              stroke="#94a3b8"
+              strokeWidth="2.5"
+              opacity="0.8"
             />
           ))}
+        </svg>
+      </div>
+
+      {/* 2. Authentic Vector Guinness Pint & Irish Pub Atmosphere (Left side watermark) */}
+      <div className="fixed -left-12 sm:-left-8 bottom-6 sm:bottom-10 pointer-events-none opacity-[0.16] lg:opacity-[0.24] select-none z-0">
+        <svg viewBox="0 0 260 400" className="w-[200px] sm:w-[260px] h-[300px] sm:h-[400px] drop-shadow-2xl">
+          <defs>
+            <linearGradient id="stoutBody" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#0a0503" />
+              <stop offset="35%" stop-color="#1c0f0a" />
+              <stop offset="70%" stop-color="#2a1209" />
+              <stop offset="100%" stop-color="#0d0704" />
+            </linearGradient>
+            <linearGradient id="creamyHead" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="40%" stop-color="#fef3c7" />
+              <stop offset="100%" stop-color="#fde68a" />
+            </linearGradient>
+            <linearGradient id="goldHarp" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fef08a" />
+              <stop offset="50%" stop-color="#f59e0b" />
+              <stop offset="100%" stop-color="#b45309" />
+            </linearGradient>
+          </defs>
+
+          {/* Glass Pint Silhouette */}
+          <path
+            d="M 50 70 L 65 340 Q 66 360 85 360 L 175 360 Q 194 360 195 340 L 210 70 Z"
+            fill="url(#stoutBody)"
+            stroke="#475569"
+            strokeWidth="3"
+          />
+
+          {/* Thick Velvet Creamy Foam Head */}
+          <path
+            d="M 48 70 Q 130 65 212 70 L 208 120 Q 130 130 52 120 Z"
+            fill="url(#creamyHead)"
+            stroke="#fde68a"
+            strokeWidth="2"
+          />
+
+          {/* Irish Celtic Golden Harp Emblem */}
+          <g transform="translate(130, 220) scale(0.9)" stroke="url(#goldHarp)" fill="none" strokeWidth="3">
+            <path d="M -25 -40 C -15 -50, 15 -50, 25 -35 C 15 -10, 10 20, 15 40 C -5 40, -25 35, -25 -40 Z" />
+            <line x1="-15" y1="-35" x2="-10" y2="35" strokeWidth="2" />
+            <line x1="-5" y1="-38" x2="-2" y2="35" strokeWidth="2" />
+            <line x1="5" y1="-38" x2="6" y2="35" strokeWidth="2" />
+            <line x1="15" y1="-32" x2="12" y2="35" strokeWidth="2" />
+          </g>
         </svg>
       </div>
 
@@ -104,7 +168,7 @@ const MainAppContent: React.FC = () => {
       {/* PWA Install Banner */}
       <PwaInstallPrompt />
 
-      {/* Main Content Area: Flex-1 + Scroll strictly constrained */}
+      {/* Main Content Area */}
       <main className="flex-1 min-h-0 max-w-7xl w-full mx-auto px-2.5 py-1.5 sm:p-3 overflow-y-auto sm:overflow-hidden relative z-10 flex flex-col justify-between">
         {/* If In Game & In 'game' tab: Show Quit / Leg / Join Bar */}
         {activeTab === 'game' && status === 'in_progress' && (

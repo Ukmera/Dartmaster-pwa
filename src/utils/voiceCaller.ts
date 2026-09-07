@@ -1,4 +1,4 @@
-// Voice Caller service using Web Speech API with High Quality Voice selection & Easter Eggs
+// Voice Caller service using Web Speech API with High Quality Voice selection & Contextual Taunts
 
 export interface VoiceSettings {
   enabled: boolean;
@@ -45,10 +45,19 @@ export function getAvailableVoices(langPrefix: string = 'fr'): SpeechSynthesisVo
   return voices.filter((v) => v.lang.toLowerCase().startsWith(langPrefix.toLowerCase()));
 }
 
-// Announce turn score with energetic referee modulation & taunt if score < 10
+/**
+ * Announce turn score with energetic referee voice & smart finish-line awareness.
+ * 
+ * Rules:
+ * 1. isWin: NEVER taunt! Announce "Game shot / Victoire !"
+ * 2. remainingScoreBeforeTurn <= 65: In checkout/setup range -> NEVER taunt "Gros nul" (small scores are normal strategy).
+ * 3. remainingScoreBeforeTurn > 65: Far from checkout -> score < 10 or Bust gets the humorous taunt.
+ */
 export function announceTurnScore(
   score: number,
   isBust: boolean = false,
+  isWin: boolean = false,
+  remainingScoreBeforeTurn: number = 501,
   settings: VoiceSettings = loadVoiceSettings()
 ): void {
   if (!settings.enabled || typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -58,16 +67,33 @@ export function announceTurnScore(
   window.speechSynthesis.cancel();
 
   let textToSpeak = '';
+  const isCloseToFinish = remainingScoreBeforeTurn <= 65;
 
-  if (isBust) {
-    textToSpeak = settings.language === 'en-GB' ? 'Bust ! Poor throw !' : 'Bust ! ... Gros nul !';
+  if (isWin) {
+    textToSpeak = settings.language === 'en-GB'
+      ? `Game shot ! ${score} !`
+      : `Manche gagnée ! ${score} !`;
+  } else if (isBust) {
+    if (isCloseToFinish) {
+      textToSpeak = settings.language === 'en-GB' ? 'Bust !' : 'Bust !';
+    } else {
+      textToSpeak = settings.language === 'en-GB' ? 'Bust ! Poor throw !' : 'Bust ! ... Gros nul !';
+    }
   } else if (score === 180) {
     textToSpeak = settings.language === 'en-GB' ? 'ONE HUNDRED AND EIGHTY !' : 'CENT QUATRE-VINGTS !';
   } else if (score === 0) {
-    textToSpeak = settings.language === 'en-GB' ? 'Zero... Poor throw !' : 'Zéro point... Gros nul !';
+    if (isCloseToFinish) {
+      textToSpeak = settings.language === 'en-GB' ? 'Zero.' : 'Zéro point.';
+    } else {
+      textToSpeak = settings.language === 'en-GB' ? 'Zero... Poor throw !' : 'Zéro point... Gros nul !';
+    }
   } else if (score < 10) {
-    // Score under 10 taunt
-    textToSpeak = settings.language === 'en-GB' ? `${score}... Poor throw !` : `${score}... Gros nul !`;
+    if (isCloseToFinish) {
+      // In checkout finish zone, hitting 1, 2, 4 etc. to setup double is normal
+      textToSpeak = String(score);
+    } else {
+      textToSpeak = settings.language === 'en-GB' ? `${score}... Poor throw !` : `${score}... Gros nul !`;
+    }
   } else {
     textToSpeak = String(score);
   }
@@ -75,8 +101,8 @@ export function announceTurnScore(
   const utterance = new SpeechSynthesisUtterance(textToSpeak);
   utterance.lang = settings.language;
   utterance.volume = settings.volume;
-  utterance.rate = score === 180 ? 0.95 : settings.rate;
-  utterance.pitch = score === 180 ? 1.25 : score < 10 ? 0.9 : settings.pitch;
+  utterance.rate = score === 180 || isWin ? 0.95 : settings.rate;
+  utterance.pitch = score === 180 || isWin ? 1.25 : score < 10 && !isCloseToFinish ? 0.9 : settings.pitch;
 
   const voices = window.speechSynthesis.getVoices();
   

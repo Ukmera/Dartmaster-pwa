@@ -43,7 +43,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const testVoice = () => {
-    announceTurnScore(180, false, voiceSettings);
+    announceTurnScore(180, false, false, 501, voiceSettings);
   };
 
   return (

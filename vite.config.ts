@@ -10,13 +10,13 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
+      includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'DartMaster Pro - Compteur de Fléchettes',
         short_name: 'DartMaster',
         description: 'Application PWA complète de comptage de points pour fléchettes (301, 501, Cricket, King)',
-        theme_color: '#0f172a',
-        background_color: '#090d16',
+        theme_color: '#060a14',
+        background_color: '#060a14',
         display: 'standalone',
         orientation: 'any',
         start_url: '/',
@@ -24,11 +24,18 @@ export default defineConfig({
           {
             src: '/icon-192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: '/icon-512.png',
             sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/apple-touch-icon.png',
+            sizes: '180x180',
             type: 'image/png'
           }
         ]

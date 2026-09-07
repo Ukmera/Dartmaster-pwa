@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, History } from 'lucide-react';
+import { TrendingUp, History, Award } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
 import { usePlayers } from '../../context/PlayerContext';
 import { DartKeypad } from '../game/DartKeypad';
@@ -11,10 +11,12 @@ export const X01Game: React.FC = () => {
   const {
     currentPlayerIndex,
     currentDarts,
+    x01Config,
     x01States,
     canUndo,
     recordDart,
     recordQuickScore,
+    commitTurnFast,
     undoLastAction
   } = useGame();
 
@@ -33,31 +35,42 @@ export const X01Game: React.FC = () => {
           const isActive = idx === currentPlayerIndex;
           const state = x01States[player.id];
           const score = state ? state.currentScore : 501;
-          const avg = state ? calculate3DartAverage(state.totalScoreScored, state.dartsThrown) : 0;
+          
+          // Match Average (All legs) & Leg Average (Current leg)
+          const matchAvg = state ? calculate3DartAverage(state.totalScoreScored, state.dartsThrown) : 0;
+          const legAvg = state ? calculate3DartAverage(state.legScoreScored || 0, state.legDartsThrown || 0) : 0;
           const lastTurn = state?.turns[state.turns.length - 1];
 
           return (
             <div
               key={player.id}
-              className={`p-2.5 rounded-2xl border transition-all relative flex flex-col justify-between ${
+              className={`p-2 sm:p-2.5 rounded-2xl border transition-all relative flex flex-col justify-between ${
                 isActive
                   ? 'bg-slate-900 border-emerald-500/80 shadow-xl glow-emerald active-player-glow'
                   : 'bg-slate-900/60 border-slate-800 opacity-80'
               }`}
             >
-              {/* Player Header */}
+              {/* Player Header with Legs Won */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-1.5 truncate">
-                  <span className="text-lg">{player.avatar}</span>
+                  <span className="text-base sm:text-lg">{player.avatar}</span>
                   <span className="font-bold text-xs sm:text-sm text-white truncate">{player.name}</span>
                 </div>
-                {isActive && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-sm" />
-                )}
+                <div className="flex items-center gap-1">
+                  {x01Config.legsToWin > 1 && (
+                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black" title="Manches gagnées">
+                      <Award className="w-2.5 h-2.5" />
+                      {state?.legsWon || 0}/{x01Config.legsToWin}
+                    </span>
+                  )}
+                  {isActive && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm" />
+                  )}
+                </div>
               </div>
 
               {/* Big Score Display */}
-              <div className="my-1 text-center">
+              <div className="my-0.5 text-center">
                 <span className={`text-3xl sm:text-4xl font-black tracking-tight ${
                   score <= 170 && score > 0 ? 'text-emerald-400' : 'text-white'
                 }`}>
@@ -72,13 +85,15 @@ export const X01Game: React.FC = () => {
                 )}
               </div>
 
-              {/* Stats Footer */}
+              {/* Stats Footer: Leg Avg & Match Avg */}
               <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 text-slate-300" title="Moyenne sur la manche en cours">
                   <TrendingUp className="w-3 h-3 text-emerald-400" />
-                  Moy. {avg}
+                  <span>Manche: <strong className="text-white">{legAvg}</strong></span>
                 </span>
-                <span>{state?.dartsThrown || 0} flèches</span>
+                <span className="text-slate-400" title="Moyenne globale sur toute la partie">
+                  Match: <strong className="text-emerald-400">{matchAvg}</strong>
+                </span>
               </div>
             </div>
           );
@@ -97,6 +112,7 @@ export const X01Game: React.FC = () => {
           <DartKeypad
             onDartThrow={recordDart}
             onQuickScore={recordQuickScore}
+            onSendTurn={commitTurnFast}
             currentDarts={currentDarts}
             canUndo={canUndo}
             onUndo={undoLastAction}

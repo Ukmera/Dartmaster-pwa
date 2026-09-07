@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Check, Zap, Hash, CircleDot, RotateCcw } from 'lucide-react';
+import { Check, Zap, Hash, CircleDot, RotateCcw, Send } from 'lucide-react';
 import type { Multiplier, DartThrow } from '../../types/dart';
 
 interface DartKeypadProps {
   onDartThrow: (sector: number, multiplier: Multiplier) => void;
   onQuickScore?: (score: number) => void;
+  onSendTurn?: () => void;
   currentDarts: DartThrow[];
   canUndo: boolean;
   onUndo: () => void;
@@ -14,6 +15,7 @@ interface DartKeypadProps {
 export const DartKeypad: React.FC<DartKeypadProps> = ({
   onDartThrow,
   onQuickScore,
+  onSendTurn,
   currentDarts,
   canUndo,
   onUndo,
@@ -56,8 +58,8 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
 
   return (
     <div className="w-full glass-panel rounded-3xl p-2.5 sm:p-4 border border-slate-700/80 shadow-2xl flex flex-col gap-2.5">
-      {/* Current Turn Status & Vibrant Intuitive Undo Button */}
-      <div className="flex items-center justify-between px-1">
+      {/* Current Turn Status, Envoyer Button & Vibrant Intuitive Undo Button */}
+      <div className="flex items-center justify-between px-1 gap-1.5 flex-wrap sm:flex-nowrap">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Volée :</span>
           <div className="flex items-center gap-1.5">
@@ -66,7 +68,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
               return (
                 <div
                   key={idx}
-                  className={`min-w-[42px] sm:min-w-[46px] h-7 sm:h-8 px-2 rounded-xl flex items-center justify-center font-black text-xs border transition-all ${
+                  className={`min-w-[40px] sm:min-w-[46px] h-7 sm:h-8 px-1.5 sm:px-2 rounded-xl flex items-center justify-center font-black text-xs border transition-all ${
                     dart
                       ? dart.multiplier === 3
                         ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
@@ -85,21 +87,36 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
           </div>
         </div>
 
-        {/* Highlighted & Intuitive Undo Button (Amber Neon) */}
-        <button
-          onClick={onUndo}
-          disabled={!canUndo}
-          aria-label="Annuler le dernier coup"
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black border transition-all active:scale-95 ${
-            canUndo
-              ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 border-amber-300 shadow-lg glow-amber cursor-pointer'
-              : 'bg-slate-900/80 border-slate-800 text-slate-600 cursor-not-allowed opacity-40'
-          }`}
-          title="Annuler la dernière flèche / score"
-        >
-          <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Annuler (Undo)</span>
-        </button>
+        {/* Action Buttons: Envoyer + Undo */}
+        <div className="flex items-center gap-1.5">
+          {/* Quick Send / Envoyer Turn Button (when 1 or 2 darts thrown) */}
+          {onSendTurn && currentDarts.length > 0 && currentDarts.length < 3 && (
+            <button
+              onClick={onSendTurn}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-md glow-emerald active:scale-95 transition-all"
+              title="Valider la volée maintenant et passer le tour"
+            >
+              <Send className="w-3 h-3" />
+              <span>Envoyer ({currentDarts.length}/3)</span>
+            </button>
+          )}
+
+          {/* Highlighted & Intuitive Undo Button (Amber Neon) */}
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            aria-label="Annuler le dernier coup"
+            className={`flex items-center gap-1 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-black border transition-all active:scale-95 ${
+              canUndo
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 border-amber-300 shadow-lg glow-amber cursor-pointer'
+                : 'bg-slate-900/80 border-slate-800 text-slate-600 cursor-not-allowed opacity-40'
+            }`}
+            title="Annuler la dernière flèche / score"
+          >
+            <RotateCcw className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Annuler</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs if Quick Scores available */}
@@ -193,7 +210,7 @@ export const DartKeypad: React.FC<DartKeypadProps> = ({
             })}
           </div>
 
-          {/* Special Targets: Bull 25, Bullseye 50, Miss 0 */}
+          {/* Special Targets: Bull 25, Bullseye 50, Miss 0, Envoyer */}
           <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-0.5">
             <button
               onClick={() => handleBullClick(false)}

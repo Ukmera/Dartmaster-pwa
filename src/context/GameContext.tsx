@@ -36,6 +36,7 @@ interface SavedGameSession {
   kingConfig: KingConfig;
   selectedPlayerIds: string[];
   currentPlayerIndex: number;
+  legStartingPlayerIndex: number;
   currentDarts: DartThrow[];
   roundIndex: number;
   currentLeg: number;
@@ -51,8 +52,10 @@ interface GameStateSnapshot {
   mode: GameMode;
   status: GameStatus;
   currentPlayerIndex: number;
+  legStartingPlayerIndex: number;
   currentDarts: DartThrow[];
   roundIndex: number;
+  currentLeg: number;
   x01States: Record<string, X01PlayerState>;
   cricketStates: Record<string, CricketPlayerState>;
   kingStates: Record<string, KingPlayerState>;
@@ -75,6 +78,7 @@ interface GameContextType {
   
   // Active game state
   currentPlayerIndex: number;
+  legStartingPlayerIndex: number;
   currentDarts: DartThrow[];
   roundIndex: number;
   currentLeg: number;
@@ -101,6 +105,7 @@ interface GameContextType {
   quitGame: () => void;
   recordDart: (sector: number, multiplier: Multiplier) => void;
   recordQuickScore: (score: number) => void;
+  commitTurnFast: () => void;
   commitTurn: () => void;
   undoLastAction: () => void;
   continueCricketMatch: () => void;
@@ -152,6 +157,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState<number>(0);
+  const [legStartingPlayerIndex, setLegStartingPlayerIndex] = useState<number>(0);
   const [currentDarts, setCurrentDarts] = useState<DartThrow[]>([]);
   const [roundIndex, setRoundIndex] = useState<number>(1);
   const [currentLeg, setCurrentLeg] = useState<number>(1);
@@ -210,6 +216,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         kingConfig,
         selectedPlayerIds,
         currentPlayerIndex,
+        legStartingPlayerIndex,
         currentDarts,
         roundIndex,
         currentLeg,
@@ -240,6 +247,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     kingConfig,
     selectedPlayerIds,
     currentPlayerIndex,
+    legStartingPlayerIndex,
     currentDarts,
     roundIndex,
     currentLeg,
@@ -258,6 +266,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setKingConfig(savedSessionData.kingConfig);
     setSelectedPlayerIds(savedSessionData.selectedPlayerIds);
     setCurrentPlayerIndex(savedSessionData.currentPlayerIndex);
+    setLegStartingPlayerIndex(savedSessionData.legStartingPlayerIndex || 0);
     setCurrentDarts(savedSessionData.currentDarts);
     setRoundIndex(savedSessionData.roundIndex);
     setCurrentLeg(savedSessionData.currentLeg);
@@ -280,8 +289,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mode,
       status,
       currentPlayerIndex,
+      legStartingPlayerIndex,
       currentDarts: [...currentDarts],
       roundIndex,
+      currentLeg,
       x01States: JSON.parse(JSON.stringify(x01States)),
       cricketStates: JSON.parse(JSON.stringify(cricketStates)),
       kingStates: JSON.parse(JSON.stringify(kingStates)),
@@ -295,8 +306,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     mode,
     status,
     currentPlayerIndex,
+    legStartingPlayerIndex,
     currentDarts,
     roundIndex,
+    currentLeg,
     x01States,
     cricketStates,
     kingStates,
@@ -304,18 +317,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     podiumWinners
   ]);
 
-  // Start New Game with Equitable Turn Rotation (Round-Robin & Duo alternate)
+  // Start New Game with Equitable Turn Rotation
   const startNewGame = useCallback(() => {
     if (selectedPlayerIds.length === 0) return;
 
     let orderedIds = [...selectedPlayerIds];
 
     if (orderedIds.length === 2) {
-      // Duo Mode: Perfect alternation A -> B, B -> A
+      // Duo Mode: Alternate A -> B, B -> A for new game
       orderedIds = [orderedIds[1], orderedIds[0]];
       setSelectedPlayerIds(orderedIds);
     } else if (orderedIds.length > 2) {
-      // Multi Mode (>2): Circular Round-Robin [J1, J2, J3] -> [J2, J3, J1]
+      // Multi Mode (>2): Circular Shift
       const [first, ...rest] = orderedIds;
       orderedIds = [...rest, first];
       setSelectedPlayerIds(orderedIds);
@@ -328,6 +341,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     historyStack.current = [];
     matchStartTime.current = Date.now();
     setCurrentPlayerIndex(0);
+    setLegStartingPlayerIndex(0);
     setCurrentDarts([]);
     setRoundIndex(1);
     setCurrentLeg(1);
@@ -346,6 +360,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setsWon: 0,
           dartsThrown: 0,
           totalScoreScored: 0,
+          legDartsThrown: 0,
+          legScoreScored: 0,
           first9DartsScore: 0,
           first9DartsCount: 0,
           checkoutOpportunities: 0,
@@ -403,6 +419,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPodiumWinners([]);
     setCurrentDarts([]);
     setCurrentLeg(1);
+    setLegStartingPlayerIndex(0);
     setPendingCricketChoice(null);
     historyStack.current = [];
   };
@@ -480,11 +497,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [mode, activePlayers, roundIndex, sound, x01States, cricketStates, kingStates, updateStatsState]
   );
 
+  // Start Next Leg with Strict Alternating First Player
   const startNextLeg = useCallback(
     (legWinnerId: string) => {
       sound.playVictory();
       setCurrentLeg((l) => l + 1);
-      setCurrentPlayerIndex(0);
+
+      // Alternate starting player for next leg (Player 1 starts Leg 1, Player 2 starts Leg 2, etc.)
+      const nextLegStartIdx = (legStartingPlayerIndex + 1) % activePlayers.length;
+      setLegStartingPlayerIndex(nextLegStartIdx);
+      setCurrentPlayerIndex(nextLegStartIdx);
+
       setCurrentDarts([]);
       setRoundIndex(1);
       setPodiumWinners([]);
@@ -498,6 +521,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updated[pId] = {
               ...updated[pId],
               currentScore: startingScore,
+              legDartsThrown: 0,
+              legScoreScored: 0,
               legsWon: pId === legWinnerId ? updated[pId].legsWon + 1 : updated[pId].legsWon
             };
           });
@@ -536,7 +561,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     },
-    [mode, sound]
+    [mode, sound, legStartingPlayerIndex, activePlayers.length]
   );
 
   const addPlayerMidGame = (newPlayerId: string) => {
@@ -556,6 +581,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setsWon: 0,
           dartsThrown: 0,
           totalScoreScored: 0,
+          legDartsThrown: 0,
+          legScoreScored: 0,
           first9DartsScore: 0,
           first9DartsCount: 0,
           checkoutOpportunities: 0,
@@ -658,6 +685,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const pState = { ...x01States[curPlayer.id] };
     const updatedDarts = [...currentDarts, dart];
 
+    // Track score at the START of this 3-dart turn
+    const partialScoreThisTurn = currentDarts.reduce((sum, d) => sum + d.points, 0);
+    const scoreBeforeTurn = pState.currentScore + partialScoreThisTurn;
+
     if (dart.multiplier === 3) sound.playTripleHit();
     else if (dart.multiplier === 2) sound.playDoubleHit();
     else if (dart.sector === 25 || dart.sector === 50) sound.playBullseye();
@@ -673,6 +704,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pState.currentScore = 0;
       pState.dartsThrown += 1;
       pState.totalScoreScored += dart.points;
+      pState.legDartsThrown += 1;
+      pState.legScoreScored += dart.points;
+
       const turnScore = updatedDarts.reduce((sum, d) => sum + d.points, 0);
       if (turnScore > pState.highestTurn) pState.highestTurn = turnScore;
 
@@ -683,20 +717,20 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throws: updatedDarts,
         totalScore: turnScore,
         isBust: false,
-        scoreBefore: pState.currentScore + dart.points,
+        scoreBefore: scoreBeforeTurn,
         scoreAfter: 0,
         timestamp: Date.now()
       });
 
-      announceTurnScore(turnScore, false);
+      announceTurnScore(turnScore, false, true, scoreBeforeTurn);
 
-      const newLegsWon = pState.legsWon + 1;
-      pState.legsWon = newLegsWon;
-      setX01States((prev) => ({ ...prev, [curPlayer.id]: pState }));
-
-      if (newLegsWon >= x01Config.legsToWin) {
+      const nextLegsWon = pState.legsWon + 1;
+      if (nextLegsWon >= x01Config.legsToWin) {
+        pState.legsWon = nextLegsWon;
+        setX01States((prev) => ({ ...prev, [curPlayer.id]: pState }));
         declareWinner(curPlayer.id);
       } else {
+        setX01States((prev) => ({ ...prev, [curPlayer.id]: pState }));
         startNextLeg(curPlayer.id);
       }
       return;
@@ -704,8 +738,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (isBust) {
       sound.playBust();
-      announceTurnScore(0, true);
+      announceTurnScore(0, true, false, scoreBeforeTurn);
+      
+      // CRITICAL FIX: Reset score back to scoreBeforeTurn on Bust!
+      pState.currentScore = scoreBeforeTurn;
       pState.dartsThrown += 1;
+      pState.legDartsThrown += 1;
+
       pState.turns.push({
         id: 't_' + Date.now(),
         playerId: curPlayer.id,
@@ -713,8 +752,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throws: updatedDarts,
         totalScore: 0,
         isBust: true,
-        scoreBefore: pState.currentScore,
-        scoreAfter: pState.currentScore,
+        scoreBefore: scoreBeforeTurn,
+        scoreAfter: scoreBeforeTurn,
         timestamp: Date.now()
       });
 
@@ -726,6 +765,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     pState.currentScore = remainingScore;
     pState.dartsThrown += 1;
     pState.totalScoreScored += dart.points;
+    pState.legDartsThrown += 1;
+    pState.legScoreScored += dart.points;
+
     if (pState.dartsThrown <= 9) {
       pState.first9DartsScore += dart.points;
       pState.first9DartsCount += 1;
@@ -734,7 +776,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (updatedDarts.length >= 3) {
       const turnScore = updatedDarts.reduce((sum, d) => sum + d.points, 0);
       if (turnScore === 180) sound.play180();
-      announceTurnScore(turnScore, false);
+      announceTurnScore(turnScore, false, false, scoreBeforeTurn);
       if (turnScore > pState.highestTurn) pState.highestTurn = turnScore;
 
       pState.turns.push({
@@ -744,7 +786,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throws: updatedDarts,
         totalScore: turnScore,
         isBust: false,
-        scoreBefore: pState.currentScore + turnScore,
+        scoreBefore: scoreBeforeTurn,
         scoreAfter: pState.currentScore,
         timestamp: Date.now()
       });
@@ -766,11 +808,17 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!curPlayer) return;
     const pState = { ...x01States[curPlayer.id] };
 
+    const scoreBeforeTurn = currentDarts.length > 0
+      ? pState.currentScore + currentDarts.reduce((sum, d) => sum + d.points, 0)
+      : pState.currentScore;
+
     if (currentDarts.length > 0) {
       const partialPoints = currentDarts.reduce((sum, d) => sum + d.points, 0);
       pState.currentScore += partialPoints;
       pState.dartsThrown -= currentDarts.length;
       pState.totalScoreScored -= partialPoints;
+      pState.legDartsThrown = Math.max(0, pState.legDartsThrown - currentDarts.length);
+      pState.legScoreScored = Math.max(0, pState.legScoreScored - partialPoints);
       setCurrentDarts([]);
     }
 
@@ -780,8 +828,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (newScore < 0 || (x01Config.doubleOut && newScore === 1)) {
       sound.playBust();
-      announceTurnScore(0, true);
+      announceTurnScore(0, true, false, scoreBeforeTurn);
       pState.dartsThrown += 3;
+      pState.legDartsThrown += 3;
       pState.turns.push({
         id: 't_' + Date.now(),
         playerId: curPlayer.id,
@@ -802,7 +851,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       pState.currentScore = 0;
       pState.dartsThrown += 3;
       pState.totalScoreScored += turnScore;
+      pState.legDartsThrown += 3;
+      pState.legScoreScored += turnScore;
       if (turnScore > pState.highestTurn) pState.highestTurn = turnScore;
+
       pState.turns.push({
         id: 't_' + Date.now(),
         playerId: curPlayer.id,
@@ -810,19 +862,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throws: [createDartThrow(0, 0), createDartThrow(0, 0), createDartThrow(20, 2)],
         totalScore: turnScore,
         isBust: false,
-        scoreBefore: turnScore,
+        scoreBefore: scoreBeforeTurn,
         scoreAfter: 0,
         timestamp: Date.now()
       });
 
-      announceTurnScore(turnScore, false);
-      const newLegsWon = pState.legsWon + 1;
-      pState.legsWon = newLegsWon;
-      setX01States((prev) => ({ ...prev, [curPlayer.id]: pState }));
-
-      if (newLegsWon >= x01Config.legsToWin) {
+      announceTurnScore(turnScore, false, true, scoreBeforeTurn);
+      const nextLegsWon = pState.legsWon + 1;
+      if (nextLegsWon >= x01Config.legsToWin) {
+        pState.legsWon = nextLegsWon;
+        setX01States((prev) => ({ ...prev, [curPlayer.id]: pState }));
         declareWinner(curPlayer.id);
       } else {
+        setX01States((prev) => ({ ...prev, [curPlayer.id]: pState }));
         startNextLeg(curPlayer.id);
       }
       return;
@@ -830,12 +882,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (turnScore === 180) sound.play180();
     else sound.playDartHit();
-    announceTurnScore(turnScore, false);
+    announceTurnScore(turnScore, false, false, scoreBeforeTurn);
 
     pState.currentScore = newScore;
     pState.dartsThrown += 3;
     pState.totalScoreScored += turnScore;
+    pState.legDartsThrown += 3;
+    pState.legScoreScored += turnScore;
     if (turnScore > pState.highestTurn) pState.highestTurn = turnScore;
+
     pState.turns.push({
       id: 't_' + Date.now(),
       playerId: curPlayer.id,
@@ -843,13 +898,31 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throws: [createDartThrow(0, 0), createDartThrow(0, 0), createDartThrow(0, 0)],
       totalScore: turnScore,
       isBust: false,
-      scoreBefore: pState.currentScore + turnScore,
+      scoreBefore: scoreBeforeTurn,
       scoreAfter: newScore,
       timestamp: Date.now()
     });
 
     setX01States((prev) => ({ ...prev, [curPlayer.id]: pState }));
     nextPlayer();
+  };
+
+  // Fast finish turn (fill remaining darts with 0 and pass)
+  const commitTurnFast = () => {
+    if (currentDarts.length === 0) {
+      // 0 darts thrown -> count as 3 missed
+      if (mode === '301' || mode === '501' || mode === '701') {
+        recordQuickScore(0);
+      } else {
+        nextPlayer();
+      }
+      return;
+    }
+
+    const needed = 3 - currentDarts.length;
+    for (let i = 0; i < needed; i++) {
+      recordDart(0, 0);
+    }
   };
 
   // ==========================================
@@ -933,9 +1006,9 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPodiumWinners(newPodium);
 
         if (currentRank === 1) {
-          const newLegs = pState.legsWon + 1;
-          pState.legsWon = newLegs;
-          if (newLegs >= cricketConfig.legsToWin) {
+          const nextLegs = pState.legsWon + 1;
+          if (nextLegs >= cricketConfig.legsToWin) {
+            pState.legsWon = nextLegs;
             setWinnerId(curPlayer.id);
             if (activePlayers.length <= 2) {
               declareWinner(curPlayer.id, newPodium);
@@ -1184,8 +1257,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const survivors = activePlayers.filter((p) => !updatedKing[p.id]?.isEliminated);
         if (survivors.length <= 1) {
           const legWinnerId = survivors[0]?.id || curPlayer.id;
-          const newLegs = (updatedKing[legWinnerId]?.legsWon || 0) + 1;
-          if (newLegs >= kingConfig.legsToWin) {
+          const nextLegs = (updatedKing[legWinnerId]?.legsWon || 0) + 1;
+          if (nextLegs >= kingConfig.legsToWin) {
+            updatedKing[legWinnerId] = {
+              ...updatedKing[legWinnerId],
+              legsWon: nextLegs
+            };
             setKingStates(updatedKing);
             declareWinner(legWinnerId);
             return;
@@ -1232,8 +1309,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMode(previousSnapshot.mode);
     setStatus(previousSnapshot.status);
     setCurrentPlayerIndex(previousSnapshot.currentPlayerIndex);
+    setLegStartingPlayerIndex(previousSnapshot.legStartingPlayerIndex || 0);
     setCurrentDarts(previousSnapshot.currentDarts);
     setRoundIndex(previousSnapshot.roundIndex);
+    setCurrentLeg(previousSnapshot.currentLeg || 1);
     setX01States(previousSnapshot.x01States);
     setCricketStates(previousSnapshot.cricketStates);
     setKingStates(previousSnapshot.kingStates);
@@ -1257,6 +1336,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCricketConfig,
         setKingConfig,
         currentPlayerIndex,
+        legStartingPlayerIndex,
         currentDarts,
         roundIndex,
         currentLeg,
@@ -1277,6 +1357,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         quitGame,
         recordDart,
         recordQuickScore,
+        commitTurnFast,
         commitTurn,
         undoLastAction,
         continueCricketMatch,
